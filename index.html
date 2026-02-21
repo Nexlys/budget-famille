@@ -13,10 +13,8 @@
 
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; display: flex; min-height: 100vh; overflow-x: hidden; }
         
-        /* --- SIDEBAR RÉTACTABLE --- */
         .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: 0.3s ease; z-index: 1000; box-sizing: border-box; }
         .sidebar.collapsed { transform: translateX(-260px); }
-        
         .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: 0.3s ease; width: 100%; box-sizing: border-box; }
         .main-content.expanded { margin-left: 0; }
 
@@ -26,38 +24,18 @@
         .nav-item:hover { background: rgba(255,255,255,0.1); }
         .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
 
-        /* --- TOP HEADER --- */
         .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; }
-        
-        /* Bouton Menu Petit en haut à gauche */
-        .toggle-sidebar-btn { 
-            background: var(--sidebar-bg); 
-            color: white; 
-            border: none; 
-            width: 42px; 
-            height: 42px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 1.4em; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            transition: 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
+        .toggle-sidebar-btn { background: var(--sidebar-bg); color: white; border: none; width: 42px; height: 42px; border-radius: 8px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .toggle-sidebar-btn:hover { background: var(--primary); }
-        
         #theme-selector { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; outline: none; }
 
-        /* --- ÉCRANS AUTH / SETUP --- */
         .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; box-sizing: border-box; }
         .auth-box { background: var(--card-bg); padding: 35px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
 
-        /* --- DASHBOARD --- */
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; align-items: start; }
         .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .balance { font-size: 1.8em; font-weight: bold; margin: 10px 0; }
+        .balance { font-size: 1.8em; font-weight: bold; margin: 10px 0; display: block;}
         
         input, select { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
         button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; transition: 0.2s; }
@@ -97,8 +75,12 @@
     <div class="auth-box">
         <h2>🏠 Configuration</h2>
         <p style="font-size:0.9em; color:#666; margin-bottom: 25px;">Rejoignez un budget existant ou créez le vôtre.</p>
+        
+        <input type="text" id="setup-pseudo" placeholder="Votre Prénom (Ex: Thomas)" required style="margin-bottom: 25px; text-align:center; font-weight:bold; border: 2px solid var(--primary);">
+
         <input type="text" id="join-code" placeholder="CODE PARTENAIRE" style="text-align:center; text-transform:uppercase; font-weight: bold; letter-spacing: 2px;">
         <button id="btn-join-budget" style="background:var(--secondary); color:#333;">Rejoindre le budget</button>
+        
         <div style="margin: 25px 0; color:#aaa; font-size:0.8em;">— OU —</div>
         <button id="btn-create-budget">Créer un nouveau foyer</button>
     </div>
@@ -120,7 +102,6 @@
 <main class="main-content" id="screen-app" style="display:none;">
     <div class="top-header">
         <button id="toggle-sidebar" class="toggle-sidebar-btn">☰</button>
-        
         <div style="display:flex; align-items:center; gap:15px;">
             <span style="font-size:0.75em; color:#2ecc71; font-weight: bold;">● Connecté</span>
             <select id="theme-selector">
@@ -138,7 +119,14 @@
         
         <div class="layout-split">
             <div>
-                <h4>🎯 Objectifs d'épargne</h4>
+                <h4>👤 Mon Profil</h4>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="admin-pseudo" placeholder="Mon prénom">
+                    <button id="btn-update-pseudo" style="width:auto; background:var(--secondary); color:#333; margin-top:8px;">Mettre à jour</button>
+                </div>
+                <p id="profile-success" style="color:#2ecc71; font-size:0.8em; display:none; margin:5px 0;">Profil mis à jour !</p>
+
+                <h4 style="margin-top:25px;">🎯 Objectifs d'épargne</h4>
                 <form id="goal-form">
                     <input type="text" id="goal-name" placeholder="Ex: Voyage Japon" required>
                     <input type="number" id="goal-target" placeholder="Montant cible €" required>
@@ -189,6 +177,7 @@
             <div style="margin-top:12px; font-size:0.8em; color:#666;">
                 <input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)
             </div>
+            <div id="proportional-container" style="display:none; text-align:left;"></div>
         </div>
     </div>
     
@@ -202,9 +191,11 @@
                     <label><input type="radio" name="trans-type" value="expense" checked> Dépense</label>
                     <label><input type="radio" name="trans-type" value="income"> Revenu</label>
                 </div>
-                <input type="text" id="desc" placeholder="Description (Ex: Courses Casino)" required>
+                <input type="text" id="desc" placeholder="Description (Ex: Courses)" required>
                 <input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
-                <select id="payer"><option value="Moi">Moi</option><option value="Ma Compagne">Ma Compagne</option></select>
+                
+                <select id="payer" required></select>
+                
                 <select id="category" required></select>
                 <div id="goal-selector-group" style="display:none;"><select id="goal-selector"></select></div>
                 <button type="submit">Enregistrer l'opération</button>
@@ -217,7 +208,7 @@
             </div>
             <div class="card" style="padding:0; overflow-x:auto;">
                 <table style="min-width: 500px;">
-                    <thead style="background:rgba(0,0,0,0.02);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Prix</th><th>Action</th></tr></thead>
+                    <thead style="background:rgba(0,0,0,0.02);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Prix</th><th>Action</th></tr></thead>
                     <tbody id="expense-list"></tbody>
                 </table>
             </div>
