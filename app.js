@@ -4,12 +4,13 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, si
 
 // 🔴 CONFIGURATION FIREBASE
 const firebaseConfig = {
-    apiKey: "VOTRE_CLE",
-    authDomain: "VOTRE_PROJET.firebaseapp.com",
-    projectId: "VOTRE_PROJET",
-    storageBucket: "VOTRE_PROJET.appspot.com",
-    messagingSenderId: "VOTRE_ID",
-    appId: "VOTRE_APP_ID"
+  apiKey: "AIzaSyBRx9Cq4O2FfJu-2rQFYsoY4xzBcEV29pw",
+  authDomain: "projet-duo.firebaseapp.com",
+  projectId: "projet-duo",
+  storageBucket: "projet-duo.firebasestorage.app",
+  messagingSenderId: "963400986667",
+  appId: "1:963400986667:web:458602ba323ee1adf33a6e",
+  measurementId: "G-DJMM6FLJZN"
 };
 
 const app = initializeApp(firebaseConfig);
