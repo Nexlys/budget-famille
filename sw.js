@@ -1,11 +1,14 @@
-const CACHE_NAME = 'budget-duo-v2'; // On passe en version 2 !
+// Changez simplement le numéro de version ici !
+const CACHE_NAME = 'budget-duo-v2'; 
 const urlsToCache = [
   './',
   './index.html',
   './app.js',
-  './manifest.json'
+  './manifest.json',
+  // ... vos images (fond-panda.jpg etc.)
 ];
 
+// ... (laissez le reste de votre code sw.js intact)
 // Installation : on force la mise à jour
 self.addEventListener('install', event => {
   self.skipWaiting();
