@@ -8,27 +8,22 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* ==========================================================================
-           🛡️ SÉCURITÉ ANTI-DÉBORDEMENT (Empêche la page de se décaler à droite)
+           🛡️ SÉCURITÉ ANTI-DÉBORDEMENT GLOBALE
            ========================================================================== */
         *, *::before, *::after { box-sizing: border-box; }
         html, body { max-width: 100%; overflow-x: hidden; position: relative; width: 100vw; margin: 0; padding: 0; }
 
-        /* --- LES THEMES DE COULEURS --- */
+        /* --- LES THEMES --- */
         :root { --primary: #4A90E2; --secondary: #50E3C2; --bg: #F4F7F6; --text: #333; --card-bg: #FFF; --border: #ddd; --sidebar-bg: #2C3E50; --sidebar-text: #ecf0f1; }
         body.theme-dark { --primary: #6ab0ff; --secondary: #50E3C2; --bg: #121212; --text: #f0f0f0; --card-bg: #1e1e1e; --border: #333; --sidebar-bg: #000; --sidebar-text: #fff; }
         body.theme-cosy { --primary: #D4A373; --secondary: #A9AF7E; --bg: #FAEDCD; --text: #5E503F; --card-bg: #FEFAE0; --border: #E9EDC9; --sidebar-bg: #5E503F; --sidebar-text: #FEFAE0; }
         body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
         body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
 
-        /* --- DÉCORATIONS THÈMES PANDAS (Fond fixé à l'écran) --- */
-        body::before { 
-            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-            z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; 
-            background-size: cover; background-position: center; pointer-events: none; 
-        }
+        /* --- DÉCORATIONS PANDAS --- */
+        body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; opacity: 0; transition: opacity 0.5s ease; background-size: cover; background-position: center; pointer-events: none; }
         .sidebar-footer { position: relative; }
-        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
-
+        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease; }
         body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
         body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
         body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
@@ -66,9 +61,11 @@
         /* --- GRILLES ET CARTES --- */
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; align-items: start; width: 100%; }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; max-width: 100%; overflow-x: hidden; }
         
-        /* Réduction des cartes */
+        /* CORRECTION MINEURE : min-width: 0 permet aux éléments de ne pas s'étirer à l'infini */
+        .grid-stats > div, .layout-split > div { min-width: 0; }
+
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .card-header h3 { margin: 0 !important; }
         .toggle-card-btn { background: transparent !important; color: var(--text) !important; border: none !important; box-shadow: none !important; font-size: 1.3em !important; padding: 10px !important; margin: -10px !important; width: auto !important; min-width: auto !important; cursor: pointer; opacity: 0.6; transition: 0.2s; outline: none; }
@@ -86,7 +83,8 @@
         .progress-fill { height: 100%; transition: 0.6s ease; }
         .green { background: #2ECC71; } .orange { background: #f39c12; } .red { background: #E74C3C; }
 
-        .table-container { padding: 0; width: 100%; overflow-x: auto; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        /* CORRECTION DU TABLEAU : Ajout de -webkit-overflow-scrolling pour iOS */
+        .table-container { padding: 0; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
 
@@ -111,11 +109,13 @@
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
             
-            /* Sécurité renforcée pour le contenu sur mobile */
-            .main-content { margin-left: 0 !important; padding: 10px; width: 100%; max-width: 100vw; overflow-x: hidden; }
-            .grid-stats { grid-template-columns: 1fr; gap: 15px; width: 100%; }
-            .layout-split { grid-template-columns: 1fr; width: 100%; }
-            .card { padding: 15px; width: 100%; }
+            .main-content { margin-left: 0 !important; padding: 15px; width: 100vw; max-width: 100vw; overflow-x: hidden; }
+            
+            /* LA VRAIE CORRECTION : On abandonne la Grille pour le Flexbox sur mobile ! */
+            .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+            .layout-split { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+            
+            .card { padding: 15px; width: 100%; box-sizing: border-box; }
             
             .action-bar { flex-direction: column; align-items: stretch; }
             .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 5px !important; }
@@ -191,7 +191,7 @@
     <div id="view-calendar" style="display:none;">
         <h2 style="color:var(--primary); margin-top:0;">📅 Calendrier du Foyer</h2>
         <div class="layout-split">
-            <div class="card" style="flex: 2;">
+            <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <button id="cal-prev" class="btn-small">⬅️ Préc.</button>
                     <h3 id="cal-month-display" style="margin:0;">---</h3>
@@ -203,7 +203,7 @@
                 <div class="calendar-header-days"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
-            <div class="card" style="flex: 1;">
+            <div class="card">
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
                     <input type="date" id="ev-date" required>
@@ -294,9 +294,15 @@
                     </form>
                 </div>
             </div>
-            <div>
+            
+            <div style="width: 100%;">
                 <div style="display:flex; gap:10px; margin-bottom:12px;"><input type="text" id="search-bar" placeholder="🔍 Rechercher..." style="margin-top:0;"><button id="export-btn" class="btn-small" style="background:var(--secondary); color:#333; margin-top:0 !important;">📥 CSV</button></div>
-                <div class="table-container"><table><thead style="background:rgba(0,0,0,0.02);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Prix</th><th>Action</th></tr></thead><tbody id="expense-list"></tbody></table></div>
+                <div class="table-container">
+                    <table>
+                        <thead style="background:rgba(0,0,0,0.02);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Prix</th><th>Action</th></tr></thead>
+                        <tbody id="expense-list"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div> 
