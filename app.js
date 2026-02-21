@@ -12,7 +12,6 @@ const firebaseConfig = {
   appId: "1:963400986667:web:458602ba323ee1adf33a6e",
   measurementId: "G-DJMM6FLJZN"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -21,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
     const toggleBtn = document.getElementById('toggle-sidebar');
-    const mobileOverlay = document.getElementById('mobile-overlay'); // NOUVEAU
+    const mobileOverlay = document.getElementById('mobile-overlay');
     
     const screenAuth = document.getElementById('screen-auth');
     const screenSetup = document.getElementById('screen-setup');
@@ -29,14 +28,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const viewDashboard = document.getElementById('view-dashboard');
     const viewProfile = document.getElementById('view-profile');
+    const viewCalendar = document.getElementById('view-calendar');
     const navItems = document.querySelectorAll('.nav-item');
 
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
-    let goals = [], expenses = [], customCategories = [], members = [];
+    let goals = [], expenses = [], customCategories = [], members = [], eventsData = [];
     let myChart = null, myAnnualChart = null, currentSearch = "", showAnnual = false, showEnvelopes = false;
 
-    // --- NAVIGATION SPA ET GESTION OVERLAY MOBILE ---
+    // --- ETAT DU CALENDRIER ---
+    let calMonth = new Date().getMonth();
+    let calYear = new Date().getFullYear();
+    let reminderPopupShown = false; // Pour ne l'afficher qu'une seule fois au démarrage
+
+    // --- NAVIGATION SPA ---
     function handleMobileSidebar() {
         if (window.innerWidth <= 850) {
             sidebar.classList.remove('mobile-open');
@@ -50,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         handleMobileSidebar();
     }
 
-    // Clic sur le bouton ☰
     toggleBtn?.addEventListener('click', () => {
         if (window.innerWidth <= 850) {
             sidebar.classList.toggle('mobile-open');
@@ -61,17 +65,153 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Clic sur le fond gris pour fermer le menu (NOUVEAU)
-    mobileOverlay?.addEventListener('click', () => {
-        handleMobileSidebar();
-    });
+    mobileOverlay?.addEventListener('click', handleMobileSidebar);
 
     document.getElementById('nav-dashboard')?.addEventListener('click', () => {
-        viewDashboard.style.display = 'block'; viewProfile.style.display = 'none'; setActiveNav('nav-dashboard'); window.scrollTo(0,0);
+        viewDashboard.style.display = 'block'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none';
+        setActiveNav('nav-dashboard'); window.scrollTo(0,0);
     });
 
     document.getElementById('nav-profile')?.addEventListener('click', () => {
-        viewDashboard.style.display = 'none'; viewProfile.style.display = 'block'; setActiveNav('nav-profile'); window.scrollTo(0,0);
+        viewDashboard.style.display = 'none'; viewProfile.style.display = 'block'; viewCalendar.style.display = 'none';
+        setActiveNav('nav-profile'); window.scrollTo(0,0);
+    });
+
+    document.getElementById('nav-calendar')?.addEventListener('click', () => {
+        viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'block';
+        setActiveNav('nav-calendar'); window.scrollTo(0,0);
+        renderCalendar(); // Met à jour le visuel
+    });
+
+    // --- RAPPELS (POP-UP) ---
+    function checkReminders() {
+        if(reminderPopupShown) return; // Déjà affiché
+        
+        const todayTime = new Date().setHours(0,0,0,0); // Minuit aujourd'hui
+        let upcoming = [];
+
+        eventsData.forEach(ev => {
+            if (ev.reminder > 0) {
+                // ev.date est en format YYYY-MM-DD
+                const evTime = new Date(ev.date).setHours(0,0,0,0);
+                const diffDays = (evTime - todayTime) / (1000 * 3600 * 24);
+                
+                // Si l'événement est dans le futur et inférieur ou égal au rappel choisi
+                if (diffDays >= 0 && diffDays <= ev.reminder) {
+                    upcoming.push({ ...ev, diffDays });
+                }
+            }
+        });
+
+        if (upcoming.length > 0) {
+            const list = document.getElementById('reminder-list');
+            list.innerHTML = '';
+            upcoming.forEach(ev => {
+                const dayText = ev.diffDays === 0 ? "<b>Aujourd'hui</b>" : `dans ${ev.diffDays} jour(s)`;
+                list.innerHTML += `
+                    <li style="margin-bottom:8px; padding:12px; background:rgba(0,0,0,0.03); border-radius:8px; border-left: 4px solid ${ev.important ? '#e74c3c' : 'var(--primary)'};">
+                        <strong style="font-size:1.1em;">${ev.title}</strong><br>
+                        <span style="font-size:0.9em; color:#666;">Prévu ${dayText} (${new Date(ev.date).toLocaleDateString('fr-FR')})</span>
+                    </li>`;
+            });
+            document.getElementById('reminder-popup').style.display = 'flex';
+            reminderPopupShown = true;
+        }
+    }
+
+    document.getElementById('btn-close-reminder')?.addEventListener('click', () => {
+        document.getElementById('reminder-popup').style.display = 'none';
+    });
+
+    // --- LOGIQUE CALENDRIER ---
+    document.getElementById('cal-prev')?.addEventListener('click', () => {
+        calMonth--; if(calMonth < 0) { calMonth = 11; calYear--; } renderCalendar();
+    });
+    document.getElementById('cal-next')?.addEventListener('click', () => {
+        calMonth++; if(calMonth > 11) { calMonth = 0; calYear++; } renderCalendar();
+    });
+    document.getElementById('cal-show-expenses')?.addEventListener('change', renderCalendar);
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        const monthDisplay = document.getElementById('cal-month-display');
+        if(!grid) return;
+
+        const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+        monthDisplay.innerText = `${monthNames[calMonth]} ${calYear}`;
+
+        grid.innerHTML = '';
+        
+        // Calcul du premier jour (Lundi = 1, Dimanche = 7 pour faciliter)
+        let firstDay = new Date(calYear, calMonth, 1).getDay();
+        if(firstDay === 0) firstDay = 7; 
+        
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+        // Cellules vides avant le premier jour
+        for (let i = 1; i < firstDay; i++) {
+            grid.innerHTML += `<div class="calendar-day empty"></div>`;
+        }
+
+        const showExpenses = document.getElementById('cal-show-expenses').checked;
+        const todayStr = new Date().toLocaleDateString('fr-FR');
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStrFR = `${String(day).padStart(2, '0')}/${String(calMonth+1).padStart(2, '0')}/${calYear}`; // DD/MM/YYYY
+            const dateStrISO = `${calYear}-${String(calMonth+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; // YYYY-MM-DD
+            
+            let cellHTML = `<div class="calendar-day ${dateStrFR === todayStr ? 'today' : ''}">
+                                <div class="day-num">${day}</div>`;
+            
+            // 1. Injecter les Événements
+            eventsData.forEach(ev => {
+                if (ev.date === dateStrISO) {
+                    const bgClass = ev.type === 'pro' ? 'badge-pro' : 'badge-perso';
+                    const impClass = ev.important ? 'badge-important' : '';
+                    cellHTML += `<div class="badge ${bgClass} ${impClass} delete-ev" data-id="${ev.id}" title="${ev.title}">
+                        ${ev.important ? '⚠️ ' : ''}${ev.title}
+                    </div>`;
+                }
+            });
+
+            // 2. Injecter les Dépenses (si coché)
+            if (showExpenses) {
+                expenses.forEach(ex => {
+                    if (ex.date === dateStrFR) {
+                        const isInc = ex.type === 'income';
+                        cellHTML += `<div class="badge ${isInc ? 'badge-inc' : 'badge-exp'}" title="${ex.desc} (${ex.amount}€)">
+                            ${isInc ? '+' : '-'}${ex.amount}€ <small>${ex.desc.substring(0,8)}</small>
+                        </div>`;
+                    }
+                });
+            }
+
+            cellHTML += `</div>`;
+            grid.innerHTML += cellHTML;
+        }
+    }
+
+    // Ajout d'un événement
+    document.getElementById('event-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), {
+            date: document.getElementById('ev-date').value,
+            title: document.getElementById('ev-title').value,
+            type: document.getElementById('ev-type').value,
+            important: document.getElementById('ev-important').checked,
+            reminder: parseInt(document.getElementById('ev-reminder').value)
+        });
+        e.target.reset();
+        alert("Événement ajouté au calendrier !");
+    });
+
+    // Suppression d'événement (déléguée)
+    document.addEventListener('click', async (e) => {
+        if(e.target.classList.contains('delete-ev')) { 
+            if(confirm("Supprimer cet événement du calendrier ?")) {
+                await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/events`, e.target.dataset.id)); 
+            }
+        }
     });
 
     // --- BOUTONS DASHBOARD ---
@@ -96,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         p.style.display = p.style.display === 'none' ? 'block' : 'none';
     });
 
-    // --- MISE À JOUR DE L'INTERFACE ---
+    // --- MISE À JOUR DE L'INTERFACE (DASHBOARD) ---
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
         list.innerHTML = "";
@@ -154,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if(showEnvelopes) renderEnvelopes(catSums);
         if(showAnnual) renderAnnualChart();
+        renderCalendar(); // Met à jour le calendrier si des dépenses sont ajoutées
     }
 
     function renderMembers() {
@@ -217,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
         myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: '#2ecc71' }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: '#e74c3c' }] }, options: { responsive: true, maintainAspectRatio: false } });
     }
 
-    // --- CHARGEMENT DATA ---
+    // --- CHARGEMENT DATA (AVEC CALENDRIER) ---
     function loadBudgetData() {
         screenSetup.style.display = 'none'; screenApp.style.display = 'block';
         getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(d => {
@@ -234,11 +375,20 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => {
             expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); updateUI();
         }));
+        
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), s => {
             customCategories = []; s.forEach(doc => customCategories.push({ id: doc.id, ...doc.data() })); renderCategories(); updateUI();
         }));
+        
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), s => {
             goals = []; s.forEach(doc => goals.push({ id: doc.id, ...doc.data() })); renderGoals();
+        }));
+
+        // NOUVEAU : Récupération des Événements du Calendrier
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => {
+            eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); 
+            renderCalendar();
+            checkReminders(); // Vérifie s'il y a un rappel à afficher
         }));
     }
 
