@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-// 🔴 CONFIGURATION FIREBASE
+// 🔴 CONFIGURATION FIREBASE - METTEZ VOS CLÉS ICI
 const firebaseConfig = {
   apiKey: "AIzaSyBRx9Cq4O2FfJu-2rQFYsoY4xzBcEV29pw",
   authDomain: "projet-duo.firebaseapp.com",
@@ -22,10 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribers = [];
     let goals = [], expenses = [], customCategories = [];
     let isPanelOpen = false, myChart = null, myAnnualChart = null;
-    let currentSort = { column: 'date', asc: false }, currentSearch = "";
-    let showAnnual = false, showEnvelopes = false;
+    let currentSearch = ""; let showAnnual = false; let showEnvelopes = false;
 
-    // --- ELEMENTS UI ---
     const screenAuth = document.getElementById('screen-auth');
     const screenSetup = document.getElementById('screen-setup');
     const screenApp = document.getElementById('screen-app');
@@ -43,12 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- NAVIGATION ---
+    // --- NAVIGATION BARRE LATÉRALE ---
     document.getElementById('nav-envelopes')?.addEventListener('click', () => {
         showEnvelopes = !showEnvelopes;
         document.getElementById('envelopes-section').style.display = showEnvelopes ? 'grid' : 'none';
         updateUI();
     });
+
     document.getElementById('nav-annual')?.addEventListener('click', () => {
         showAnnual = !showAnnual;
         document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none';
@@ -58,11 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FILTRES ---
     const filterMonth = document.getElementById('filter-month');
     const filterYear = document.getElementById('filter-year');
-    if(filterMonth && filterYear) {
-        const d = new Date();
+    const d = new Date();
+    if(filterYear && filterMonth) {
         for(let i = d.getFullYear() - 1; i <= d.getFullYear() + 1; i++) { filterYear.appendChild(new Option(i, i)); }
         filterYear.value = d.getFullYear();
-        filterMonth.innerHTML = "";
         ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'].forEach((m, i) => {
             filterMonth.appendChild(new Option(m, i));
         });
@@ -70,22 +68,17 @@ document.addEventListener('DOMContentLoaded', () => {
         filterMonth.addEventListener('change', updateUI);
         filterYear.addEventListener('change', updateUI);
     }
-    document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
-
-    // --- AUTHENTIFICATION ---
-    const authToggle = document.getElementById('auth-toggle-mode');
-    let isLoginMode = true;
-    authToggle?.addEventListener('click', () => {
-        isLoginMode = !isLoginMode;
-        document.getElementById('auth-title').innerText = isLoginMode ? "Connexion" : "Inscription";
-        document.getElementById('auth-submit-btn').innerText = isLoginMode ? "C'est parti !" : "Créer mon compte";
-        authToggle.innerText = isLoginMode ? "Pas de compte ? S'inscrire" : "Déjà un compte ? Se connecter";
+    document.getElementById('search-bar')?.addEventListener('input', (e) => {
+        currentSearch = e.target.value.toLowerCase();
+        updateUI();
     });
 
+    // --- AUTHENTIFICATION ---
     document.getElementById('login-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('auth-email').value;
         const pwd = document.getElementById('auth-password').value;
+        const isLoginMode = document.getElementById('auth-title').innerText === "Connexion";
         try {
             if(isLoginMode) await signInWithEmailAndPassword(auth, email, pwd);
             else await createUserWithEmailAndPassword(auth, email, pwd);
@@ -93,6 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const errEl = document.getElementById('auth-error');
             errEl.style.display = 'block';
             errEl.innerText = "Erreur : " + err.message;
+        }
+    });
+
+    document.getElementById('auth-toggle-mode')?.addEventListener('click', () => {
+        const title = document.getElementById('auth-title');
+        const btn = document.getElementById('auth-submit-btn');
+        const toggle = document.getElementById('auth-toggle-mode');
+        if(title.innerText === "Connexion") {
+            title.innerText = "Inscription"; btn.innerText = "Créer mon compte"; toggle.innerText = "Déjà un compte ? Se connecter";
+        } else {
+            title.innerText = "Connexion"; btn.innerText = "C'est parti !"; toggle.innerText = "Pas de compte ? S'inscrire";
         }
     });
 
@@ -114,12 +118,12 @@ document.addEventListener('DOMContentLoaded', () => {
             screenApp.style.display = 'none';
             screenSetup.style.display = 'none';
             CURRENT_BUDGET_ID = null;
-            unsubscribers.forEach(u => u());
+            unsubscribers.forEach(unsub => unsub());
             unsubscribers = [];
         }
     });
 
-    // --- GESTION DU FOYER ---
+    // --- FOYER ---
     document.getElementById('btn-create-budget')?.addEventListener('click', async () => {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid });
@@ -137,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { alert("Code introuvable"); }
     });
 
+    // --- CHARGEMENT DES DONNÉES ---
     function loadBudgetData() {
         screenSetup.style.display = 'none';
         screenApp.style.display = 'block';
@@ -156,11 +161,96 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    // --- ACTIONS UI ---
+    // --- FONCTIONS UI ---
+    function updateUI() {
+        const list = document.getElementById('expense-list'); if(!list) return;
+        list.innerHTML = "";
+        const m = parseInt(filterMonth.value), y = parseInt(filterYear.value);
+        let rev = 0, dep = 0, revM = 0, revC = 0, depM = 0, depC = 0;
+        const catSums = {};
+
+        expenses.filter(e => {
+            const dt = new Date(e.timestamp);
+            return dt.getMonth() === m && dt.getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch));
+        }).forEach(e => {
+            const isInc = e.type === 'income';
+            if(isInc) { rev += e.amount; e.payer === "Moi" ? revM += e.amount : revC += e.amount; }
+            else { dep += e.amount; e.payer === "Moi" ? depM += e.amount : depC += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td>${e.category}</td><td style="color:${isInc?'#2ecc71':'#e74c3c'}"><strong>${isInc?'+':'-'}${e.amount}€</strong></td><td><button class="delete-exp" data-id="${e.id}" style="width:auto; padding:5px;">🗑️</button></td>`;
+            list.appendChild(tr);
+        });
+
+        document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €';
+        document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
+        const solde = rev - dep;
+        const sEl = document.getElementById('solde-actuel');
+        sEl.innerText = solde.toFixed(2) + ' €';
+        sEl.className = 'balance ' + (solde >= 0 ? 'positive' : '');
+
+        const ctx = document.getElementById('expenseChart')?.getContext('2d');
+        if (ctx) {
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catSums), datasets: [{ data: Object.values(catSums), backgroundColor: ['#4A90E2', '#FF6B6B', '#50E3C2', '#FDCB6E'], borderWidth: 0 }] }, options: { plugins: { legend: { display: false } }, cutout: '70%' } });
+        }
+
+        if(showEnvelopes) renderEnvelopes(catSums);
+        if(showAnnual) renderAnnualChart();
+    }
+
+    function renderCategories() {
+        const sel = document.getElementById('category'); const list = document.getElementById('category-manage-list');
+        if(!sel || !list) return;
+        sel.innerHTML = '<option value="">-- Choisir --</option>';
+        customCategories.forEach(c => sel.appendChild(new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`)));
+        list.innerHTML = "";
+        customCategories.forEach(c => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${c.emoji} ${c.name}</span> <button class="delete-cat" data-id="${c.id}" style="width:auto; padding:5px;">🗑️</button>`;
+            list.appendChild(li);
+        });
+    }
+
+    function renderGoals() {
+        const cont = document.getElementById('goals-container'); const sel = document.getElementById('goal-selector');
+        if(!cont || !sel) return;
+        cont.innerHTML = ""; sel.innerHTML = '<option value="">-- Objectif --</option>';
+        goals.forEach(g => {
+            const p = Math.min((g.current / g.target) * 100, 100);
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<h3>🎯 ${g.name}</h3><p>${g.current}€ / ${g.target}€</p><div class="progress-bar"><div class="progress-fill green" style="width:${p}%"></div></div>`;
+            cont.appendChild(card);
+            sel.appendChild(new Option(g.name, g.id));
+        });
+    }
+
+    function renderEnvelopes(catSums) {
+        const envContainer = document.getElementById('envelopes-section'); if(!envContainer) return;
+        envContainer.innerHTML = '';
+        customCategories.filter(c => c.limit).forEach(cat => {
+            const spent = catSums[`${cat.emoji} ${cat.name}`] || 0;
+            const p = Math.min((spent / cat.limit) * 100, 100);
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<h3>${cat.emoji} ${cat.name}</h3><p>${spent.toFixed(2)}€ / ${cat.limit}€</p><div class="progress-bar"><div class="progress-fill ${p > 90 ? 'red' : (p > 70 ? 'orange' : 'green')}" style="width:${p}%"></div></div>`;
+            envContainer.appendChild(card);
+        });
+    }
+
+    function renderAnnualChart() {
+        const ctx = document.getElementById('annualChart')?.getContext('2d'); if(!ctx) return;
+        const monthlyData = new Array(12).fill(0).map(() => ({ inc: 0, exp: 0 }));
+        expenses.filter(e => new Date(e.timestamp).getFullYear() === parseInt(filterYear.value)).forEach(e => {
+            const m = new Date(e.timestamp).getMonth();
+            if(e.type === 'income') monthlyData[m].inc += e.amount; else monthlyData[m].exp += e.amount;
+        });
+        if(myAnnualChart) myAnnualChart.destroy();
+        myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: '#2ecc71' }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: '#e74c3c' }] }, options: { responsive: true, maintainAspectRatio: false } });
+    }
+
+    // --- ACTIONS ---
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
     document.getElementById('login-btn')?.addEventListener('click', () => {
-        isPanelOpen = !isPanelOpen;
-        document.getElementById('admin-panel').style.display = isPanelOpen ? 'block' : 'none';
+        isPanelOpen = !isPanelOpen; document.getElementById('admin-panel').style.display = isPanelOpen ? 'block' : 'none';
     });
 
     document.getElementById('expense-form')?.addEventListener('submit', async (e) => {
@@ -180,72 +270,22 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.reset();
     });
 
-    function renderCategories() {
-        const sel = document.getElementById('category'); if(!sel) return;
-        sel.innerHTML = '<option value="">-- Choisir --</option>';
-        customCategories.filter(c => c.isActive !== false).forEach(c => sel.appendChild(new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`)));
-        const list = document.getElementById('category-manage-list'); if(!list) return;
-        list.innerHTML = "";
-        customCategories.forEach(c => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${c.emoji} ${c.name}</span> <button class="delete-cat" data-id="${c.id}" style="width:auto; padding:5px;">🗑️</button>`;
-            list.appendChild(li);
+    document.getElementById('category-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { 
+            emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, 
+            limit: parseFloat(document.getElementById('new-cat-limit').value) || null, isActive: true 
         });
-    }
+        e.target.reset();
+    });
 
-    function renderGoals() {
-        const cont = document.getElementById('goals-container'); if(!cont) return;
-        cont.innerHTML = "";
-        const sel = document.getElementById('goal-selector'); if(sel) sel.innerHTML = '<option value="">-- Objectif --</option>';
-        goals.forEach(g => {
-            const p = Math.min((g.current / g.target) * 100, 100);
-            const card = document.createElement('div'); card.className = 'card';
-            card.innerHTML = `<h3>🎯 ${g.name}</h3><p>${g.current}€ / ${g.target}€</p><div class="progress-bar"><div class="progress-fill green" style="width:${p}%"></div></div>`;
-            cont.appendChild(card);
-            if(sel) sel.appendChild(new Option(g.name, g.id));
+    document.getElementById('goal-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), {
+            name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value)
         });
-    }
-
-    function updateUI() {
-        const list = document.getElementById('expense-list'); if(!list) return;
-        list.innerHTML = "";
-        const m = parseInt(filterMonth.value), y = parseInt(filterYear.value);
-        let rev = 0, dep = 0, revM = 0, revC = 0, depM = 0, depC = 0;
-        const catSums = {};
-
-        expenses.filter(e => {
-            const dt = new Date(e.timestamp);
-            return dt.getMonth() === m && dt.getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch));
-        }).forEach(e => {
-            const isInc = e.type === 'income';
-            if(isInc) { rev += e.amount; e.payer === "Moi" ? revM += e.amount : revC += e.amount; }
-            else { dep += e.amount; e.payer === "Moi" ? depM += e.amount : depC += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td>${e.category}</td><td style="color:${isInc?'#2ecc71':'#e74c3c'}"><strong>${isInc?'+':'-'}${e.amount}€</strong></td><td><button class="delete-exp" data-id="${e.id}">🗑️</button></td>`;
-            list.appendChild(tr);
-        });
-
-        document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €';
-        document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
-        const solde = rev - dep;
-        const sEl = document.getElementById('solde-actuel');
-        sEl.innerText = solde.toFixed(2) + ' €';
-        sEl.className = 'balance ' + (solde >= 0 ? 'positive' : '');
-
-        // Taux d'effort
-        const pM = revM > 0 ? Math.min((depM / revM) * 100, 100) : 0;
-        const pC = revC > 0 ? Math.min((depC / revC) * 100, 100) : 0;
-        document.getElementById('pct-moi-text').innerText = pM.toFixed(1);
-        document.getElementById('pct-moi-bar').style.width = pM + '%';
-        document.getElementById('pct-elle-text').innerText = pC.toFixed(1);
-        document.getElementById('pct-elle-bar').style.width = pC + '%';
-
-        const ctx = document.getElementById('expenseChart')?.getContext('2d');
-        if (ctx) {
-            if (myChart) myChart.destroy();
-            myChart = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catSums), datasets: [{ data: Object.values(catSums), backgroundColor: ['#4A90E2', '#FF6B6B', '#50E3C2', '#FDCB6E'], borderWidth: 0 }] }, options: { plugins: { legend: { display: false } }, cutout: '70%' } });
-        }
-    }
+        e.target.reset();
+    });
 
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('delete-exp')) { if(confirm("Supprimer ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id)); }
