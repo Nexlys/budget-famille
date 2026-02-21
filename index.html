@@ -7,9 +7,16 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* --- LES THEMES --- */
         :root { --primary: #4A90E2; --secondary: #50E3C2; --bg: #F4F7F6; --text: #333; --card-bg: #FFF; --border: #ddd; --sidebar-bg: #2C3E50; --sidebar-text: #ecf0f1; }
         body.theme-dark { --primary: #6ab0ff; --secondary: #50E3C2; --bg: #121212; --text: #f0f0f0; --card-bg: #1e1e1e; --border: #333; --sidebar-bg: #000; --sidebar-text: #fff; }
         body.theme-cosy { --primary: #D4A373; --secondary: #A9AF7E; --bg: #FAEDCD; --text: #5E503F; --card-bg: #FEFAE0; --border: #E9EDC9; --sidebar-bg: #5E503F; --sidebar-text: #FEFAE0; }
+        
+        /* 🐼 NOUVEAU : THÈME PANDA GÉANT (Noir, Blanc, Vert Bambou) */
+        body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #F2F4F2; --text: #111; --card-bg: #FFF; --border: #CCC; --sidebar-bg: #1A1A1A; --sidebar-text: #FFF; }
+        
+        /* 🦊 NOUVEAU : THÈME PANDA ROUX (Rouille, Crème, Marron) */
+        body.theme-panda-roux { --primary: #D35400; --secondary: #F39C12; --bg: #FAF3E8; --text: #4A2311; --card-bg: #FFF; --border: #EADDCB; --sidebar-bg: #8E3514; --sidebar-text: #FDF4E3; }
 
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; display: flex; min-height: 100vh; overflow-x: hidden; }
         
@@ -98,8 +105,7 @@
     <div class="auth-box" style="background: var(--card-bg); color: var(--text); border: 3px solid var(--primary);">
         <h2 style="color: var(--primary); margin-top:0;">🔔 Rappels en cours</h2>
         <p style="font-size:0.9em; color:#666;">Ne les oubliez pas !</p>
-        <ul id="reminder-list" style="list-style:none; padding:0; text-align:left; max-height: 200px; overflow-y: auto; margin-bottom:20px;">
-            </ul>
+        <ul id="reminder-list" style="list-style:none; padding:0; text-align:left; max-height: 200px; overflow-y: auto; margin-bottom:20px;"></ul>
         <button id="btn-close-reminder" style="background: var(--secondary); color:#333; margin-top:0;">Compris, fermer</button>
     </div>
 </div>
@@ -147,17 +153,19 @@
         <button id="toggle-sidebar" class="toggle-sidebar-btn">☰</button>
         <div style="display:flex; align-items:center; gap:10px;">
             <span style="font-size:0.75em; color:#2ecc71; font-weight: bold; white-space: nowrap;">● Connecté</span>
+            
             <select id="theme-selector">
                 <option value="light">☀️ Clair</option>
                 <option value="dark">🌙 Sombre</option>
                 <option value="cosy">☕ Cosy</option>
+                <option value="panda-geant">🐼 Panda Géant</option>
+                <option value="panda-roux">🦊 Panda Roux</option>
             </select>
         </div>
     </div>
 
     <div id="view-calendar" style="display:none;">
         <h2 style="color:var(--primary); margin-top:0;">📅 Calendrier du Foyer</h2>
-        
         <div class="layout-split">
             <div class="card" style="flex: 2;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -165,43 +173,23 @@
                     <h3 id="cal-month-display" style="margin:0;">---</h3>
                     <button id="cal-next" class="btn-small">Mois Suiv. ➡️</button>
                 </div>
-                
                 <div style="margin-bottom:15px; font-size:0.9em; display:flex; gap:15px; align-items:center; background:var(--bg); padding:10px; border-radius:8px;">
-                    <label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
-                        <input type="checkbox" id="cal-show-expenses" checked> 💰 Afficher les transactions (Dépenses/Revenus)
-                    </label>
+                    <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" id="cal-show-expenses" checked> 💰 Afficher les transactions</label>
                 </div>
-
-                <div class="calendar-header-days">
-                    <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
-                </div>
+                <div class="calendar-header-days"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
-
             <div class="card" style="flex: 1;">
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
                     <input type="date" id="ev-date" required>
                     <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste)" required>
-                    <select id="ev-type" required>
-                        <option value="perso">👤 Personnel</option>
-                        <option value="pro">💼 Professionnel</option>
-                    </select>
-                    
+                    <select id="ev-type" required><option value="perso">👤 Personnel</option><option value="pro">💼 Professionnel</option></select>
                     <div style="margin:15px 0; background:rgba(231, 76, 60, 0.1); padding:10px; border-radius:8px;">
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:bold; color:#e74c3c;">
-                            <input type="checkbox" id="ev-important"> ⚠️ Événement Important
-                        </label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:bold; color:#e74c3c;"><input type="checkbox" id="ev-important"> ⚠️ Événement Important</label>
                     </div>
-
                     <label style="font-size:0.85em; font-weight:bold;">🔔 M'alerter via Pop-up :</label>
-                    <select id="ev-reminder" style="margin-top:5px;">
-                        <option value="0">Aucun rappel</option>
-                        <option value="1">1 jour avant</option>
-                        <option value="3">3 jours avant</option>
-                        <option value="7">7 jours avant</option>
-                    </select>
-                    
+                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun rappel</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
                     <button type="submit">Ajouter au calendrier</button>
                 </form>
             </div>
@@ -245,29 +233,19 @@
                 </div>
                 <div>
                     <h4 style="margin-top:0;">📂 Catégories de budget</h4>
-                    <form id="category-form">
-                        <div style="display:flex; gap:8px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;"><input type="text" id="new-cat-name" placeholder="Nom" required></div>
-                        <input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)">
-                        <button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button>
-                    </form>
+                    <form id="category-form"><div style="display:flex; gap:8px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;"><input type="text" id="new-cat-name" placeholder="Nom" required></div><input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)"><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button></form>
                     <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
             </div>
         </div>
 
-        <div id="annual-section" class="card" style="display:none; margin-bottom:25px;">
-            <h3>📈 Évolution Annuelle</h3><canvas id="annualChart" style="max-height:280px;"></canvas>
-        </div>
+        <div id="annual-section" class="card" style="display:none; margin-bottom:25px;"><h3>📈 Évolution Annuelle</h3><canvas id="annualChart" style="max-height:280px;"></canvas></div>
         <div id="envelopes-section" class="grid-stats" style="display:none; margin-bottom:25px;"></div>
 
         <div class="grid-stats">
             <div class="card"><h3>💰 Solde restant</h3><span id="solde-actuel" class="balance">0.00 €</span><p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p></div>
             <div class="card"><h3>📊 Dépenses totales</h3><span id="total-depenses" class="balance" style="color:#e74c3c">0.00 €</span></div>
-            <div class="card" style="text-align:center;">
-                <h3 style="text-align:left;">📈 Répartition</h3><canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas>
-                <div style="margin-top:12px; font-size:0.8em; color:#666;"><input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)</div>
-                <div id="proportional-container" style="display:none; text-align:left;"></div>
-            </div>
+            <div class="card" style="text-align:center;"><h3 style="text-align:left;">📈 Répartition</h3><canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas><div style="margin-top:12px; font-size:0.8em; color:#666;"><input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)</div><div id="proportional-container" style="display:none; text-align:left;"></div></div>
         </div>
         
         <div id="goals-container" class="grid-stats"></div>
@@ -276,10 +254,7 @@
             <div class="card">
                 <h3>➕ Nouvelle Opération</h3>
                 <form id="expense-form">
-                    <div style="display:flex; gap:15px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px; flex-wrap: wrap;">
-                        <label style="flex:1;"><input type="radio" name="trans-type" value="expense" checked> Dépense</label>
-                        <label style="flex:1;"><input type="radio" name="trans-type" value="income"> Revenu</label>
-                    </div>
+                    <div style="display:flex; gap:15px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px; flex-wrap: wrap;"><label style="flex:1;"><input type="radio" name="trans-type" value="expense" checked> Dépense</label><label style="flex:1;"><input type="radio" name="trans-type" value="income"> Revenu</label></div>
                     <input type="text" id="desc" placeholder="Description (Ex: Courses)" required><input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
                     <select id="payer" required></select><select id="category" required></select>
                     <div id="goal-selector-group" style="display:none;"><select id="goal-selector"></select></div>
