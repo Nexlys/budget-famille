@@ -38,30 +38,44 @@
             opacity: 0; transition: opacity 0.3s ease-in-out;
         }
 
+        /* ==========================================================================
+           🐼🎋 DÉCORATIONS THÈMES PANDAS (IMAGES LOCALES) 🎋🦊
+           ========================================================================== */
+        
+        .main-content { position: relative; z-index: 1; }
+        .main-content::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out;
+            background-size: cover; background-position: center; background-attachment: fixed; pointer-events: none;
+        }
+
+        .sidebar-footer { position: relative; }
+        .sidebar-footer::before {
+            content: ''; display: block; height: 120px; margin-bottom: 10px;
+            background-size: contain; background-repeat: no-repeat; background-position: center bottom;
+            opacity: 0; transition: opacity 0.3s ease-in-out;
+        }
+
         /* --- ACTIVATION PANDA GÉANT 🐼 --- */
-        /* Image de fond: Bébé panda kawaii dans une forêt (avec un filtre blanc transparent pour la lisibilité) */
         body.theme-panda-geant .main-content::before {
             opacity: 1;
-            background-image: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('https://img.freepik.com/premium-vector/cute-baby-panda-bamboo-forest-kawaii-style-illustration_852428-111.jpg');
+            /* Filtre blanc passé à 0.6 pour bien voir votre image fond-panda.jpg */
+            background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg');
         }
-        /* Mascotte Menu */
         body.theme-panda-geant .sidebar-footer::before {
             opacity: 1;
-            background-image: url('https://cdn-icons-png.flaticon.com/512/3069/3069186.png'); 
+            background-image: url('icone-panda.png'); 
         }
 
         /* --- ACTIVATION PANDA ROUX 🦊 --- */
-        /* Image de fond: Forêt automnale (avec un filtre crème transparent) */
         body.theme-panda-roux .main-content::before {
             opacity: 1;
-            /* REMPLACEZ LE LIEN CI-DESSOUS PAR VOTRE IMAGE LOCALE SI DÉSIRÉ */
-            background-image: linear-gradient(rgba(255,243,224,0.9), rgba(255,243,224,0.9)), url('https://images.unsplash.com/photo-1499543222496-d37c8f21e38b?q=80&w=2070&auto=format&fit=crop');
+            /* Filtre crème passé à 0.6 pour bien voir votre image fond-roux.jpg */
+            background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg');
         }
-        /* Mascotte Menu */
         body.theme-panda-roux .sidebar-footer::before {
             opacity: 1;
-             /* REMPLACEZ LE LIEN CI-DESSOUS PAR VOTRE IMAGE LOCALE SI DÉSIRÉ */
-            background-image: url('');
+            background-image: url('icone-roux.png');
         }
         /* ========================================================================== */
 
