@@ -4,13 +4,12 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, si
 
 // 🔴 REMPLACEZ PAR VOS CLÉS FIREBASE
 const firebaseConfig = {
-  apiKey: "AIzaSyBRx9Cq4O2FfJu-2rQFYsoY4xzBcEV29pw",
-  authDomain: "projet-duo.firebaseapp.com",
-  projectId: "projet-duo",
-  storageBucket: "projet-duo.firebasestorage.app",
-  messagingSenderId: "963400986667",
-  appId: "1:963400986667:web:458602ba323ee1adf33a6e",
-  measurementId: "G-DJMM6FLJZN"
+    apiKey: "VOTRE_CLE",
+    authDomain: "VOTRE_PROJET.firebaseapp.com",
+    projectId: "VOTRE_PROJET",
+    storageBucket: "VOTRE_PROJET.appspot.com",
+    messagingSenderId: "VOTRE_ID",
+    appId: "VOTRE_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -21,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
     const toggleBtn = document.getElementById('toggle-sidebar');
+    const mobileOverlay = document.getElementById('mobile-overlay'); // NOUVEAU
+    
     const screenAuth = document.getElementById('screen-auth');
     const screenSetup = document.getElementById('screen-setup');
     const screenApp = document.getElementById('screen-app');
@@ -34,11 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let goals = [], expenses = [], customCategories = [], members = [];
     let myChart = null, myAnnualChart = null, currentSearch = "", showAnnual = false, showEnvelopes = false;
 
-    // --- NAVIGATION SPA ET MOBILE ---
+    // --- NAVIGATION SPA ET GESTION OVERLAY MOBILE ---
     function handleMobileSidebar() {
-        // Sur mobile (<= 850px), on retire la classe 'mobile-open' pour cacher le menu
         if (window.innerWidth <= 850) {
             sidebar.classList.remove('mobile-open');
+            if (mobileOverlay) mobileOverlay.classList.remove('active');
         }
     }
 
@@ -48,14 +49,20 @@ document.addEventListener('DOMContentLoaded', () => {
         handleMobileSidebar();
     }
 
-    // Gestion du bouton "Hamburger" (☰)
+    // Clic sur le bouton ☰
     toggleBtn?.addEventListener('click', () => {
         if (window.innerWidth <= 850) {
-            sidebar.classList.toggle('mobile-open'); // Mobile : on glisse le menu
+            sidebar.classList.toggle('mobile-open');
+            if (mobileOverlay) mobileOverlay.classList.toggle('active');
         } else {
-            sidebar.classList.toggle('collapsed'); // PC : on plie le menu
+            sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('expanded');
         }
+    });
+
+    // Clic sur le fond gris pour fermer le menu (NOUVEAU)
+    mobileOverlay?.addEventListener('click', () => {
+        handleMobileSidebar();
     });
 
     document.getElementById('nav-dashboard')?.addEventListener('click', () => {
@@ -66,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         viewDashboard.style.display = 'none'; viewProfile.style.display = 'block'; setActiveNav('nav-profile'); window.scrollTo(0,0);
     });
 
-    // --- NOUVEAUX BOUTONS DASHBOARD ---
+    // --- BOUTONS DASHBOARD ---
     document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => {
         showEnvelopes = !showEnvelopes; 
         document.getElementById('envelopes-section').style.display = showEnvelopes ? 'grid' : 'none';

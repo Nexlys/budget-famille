@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Budget Duo</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,7 +14,7 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; display: flex; min-height: 100vh; overflow-x: hidden; }
         
         /* --- SIDEBAR --- */
-        .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: transform 0.3s ease; z-index: 1000; box-sizing: border-box; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: transform 0.3s ease; z-index: 1001; box-sizing: border-box; }
         .sidebar.collapsed { transform: translateX(-260px); }
         .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: margin-left 0.3s ease; width: 100%; box-sizing: border-box; }
         .main-content.expanded { margin-left: 0; }
@@ -26,27 +26,14 @@
         .nav-item.active { background: var(--primary); color: white; }
         .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
 
+        /* --- FOND GRIS MOBILE (OVERLAY) --- */
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; opacity: 0; transition: opacity 0.3s ease; }
+        .mobile-overlay.active { display: block; opacity: 1; }
+
         /* --- HEADER & BARRE D'ACTIONS --- */
         .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; }
         
-        /* CORRECTION DU BOUTON MENU : On force la taille et on annule les marges globales */
-        .toggle-sidebar-btn { 
-            background: var(--sidebar-bg); 
-            color: white; 
-            border: none; 
-            width: 42px !important; 
-            height: 42px !important; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 1.4em; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: 0.2s; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin: 0 !important;
-            padding: 0 !important;
-        }
+        .toggle-sidebar-btn { background: var(--sidebar-bg); color: white; border: none; width: 42px !important; height: 42px !important; border-radius: 8px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 0 !important; padding: 0 !important; }
         .toggle-sidebar-btn:hover { background: var(--primary); }
         
         #theme-selector { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; outline: none; }
@@ -64,19 +51,15 @@
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .balance { font-size: 1.8em; font-weight: bold; margin: 10px 0; display: block;}
         
-        /* Formulaires et Boutons Globaux */
         input, select { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
         button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; transition: 0.2s; }
         button:hover { opacity: 0.9; }
-        
-        /* Boutons d'actions sécurisés contre le width:100% */
         .btn-small { width: auto !important; margin: 0 !important; padding: 10px 15px !important; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
 
         .progress-bar { width: 100%; background: var(--border); border-radius: 10px; height: 12px; overflow: hidden; margin-top: 10px; }
         .progress-fill { height: 100%; transition: 0.6s ease; }
         .green { background: #2ECC71; } .orange { background: #f39c12; } .red { background: #E74C3C; }
 
-        /* Tableau Mobile Friendly */
         .table-container { padding: 0; overflow-x: auto; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
@@ -87,9 +70,12 @@
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
-            .main-content { margin-left: 0 !important; padding: 15px; }
-            .layout-split { grid-template-columns: 1fr; }
+            
+            .main-content { margin-left: 0 !important; padding: 15px; max-width: 100vw; }
+            
+            /* Forcer 1 seule colonne sur les petits écrans pour éviter les bugs de redimensionnement */
             .grid-stats { grid-template-columns: 1fr; gap: 15px; }
+            .layout-split { grid-template-columns: 1fr; }
             
             /* Ajustement de la barre d'actions (Boutons en colonne sur mobile) */
             .action-bar { flex-direction: column; align-items: stretch; }
@@ -97,12 +83,13 @@
             .action-bar-spacer { display: none; }
             
             .top-header { margin-bottom: 15px; }
-            #theme-selector { padding: 8px; }
             .auth-box { padding: 25px; }
         }
     </style>
 </head>
 <body>
+
+<div id="mobile-overlay" class="mobile-overlay"></div>
 
 <div id="screen-auth" class="fullscreen-overlay">
     <div class="auth-box">
@@ -156,13 +143,11 @@
 
     <div id="view-profile" style="display:none; max-width: 600px; margin: auto;">
         <h2 style="color:var(--primary); margin-top:0; margin-bottom: 20px;">👤 Mon Profil & Foyer</h2>
-        
         <div class="card" style="margin-bottom: 25px;">
             <h3 style="margin-top:0;">Inviter un partenaire</h3>
             <p style="font-size:0.9em; margin-bottom:5px;">Donnez ce code à la personne avec qui vous partagez ce budget :</p>
             <h2 id="display-invite-code" style="text-align:center; color:var(--primary); letter-spacing:8px; margin:15px 0; background:var(--bg); display:block; padding:15px; border-radius:8px; border: 2px dashed var(--secondary);">---</h2>
         </div>
-
         <div class="card">
             <h3 style="margin-top:0;">Mes informations</h3>
             <label style="font-weight: bold; font-size: 0.9em;">Mon Prénom dans l'application</label>
@@ -175,13 +160,10 @@
     </div>
 
     <div id="view-dashboard">
-        
         <div class="action-bar">
             <select id="filter-month" style="width:auto; margin:0;"></select>
             <select id="filter-year" style="width:auto; margin:0;"></select>
-            
             <div class="action-bar-spacer"></div> 
-            
             <button id="btn-toggle-annual" class="btn-small">📈 Annuel</button>
             <button id="btn-toggle-envelopes" class="btn-small">✉️ Enveloppes</button>
             <button id="btn-toggle-admin" class="btn-small" style="background:var(--secondary); border:none;">⚙️ Catégories & Objectifs</button>
@@ -192,9 +174,9 @@
                 <div>
                     <h4 style="margin-top:0;">🎯 Objectifs d'épargne</h4>
                     <form id="goal-form">
-                        <input type="text" id="goal-name" placeholder="Ex: Voyage Japon" required>
-                        <input type="number" id="goal-target" placeholder="Montant cible €" required>
-                        <button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter l'objectif</button>
+                        <input type="text" id="goal-name" placeholder="Ex: Voyage" required>
+                        <input type="number" id="goal-target" placeholder="Cible €" required>
+                        <button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button>
                     </form>
                     <ul id="goal-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
@@ -203,10 +185,10 @@
                     <form id="category-form">
                         <div style="display:flex; gap:8px;">
                             <input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;">
-                            <input type="text" id="new-cat-name" placeholder="Nom (Ex: Loyer)" required>
+                            <input type="text" id="new-cat-name" placeholder="Nom" required>
                         </div>
-                        <input type="number" id="new-cat-limit" placeholder="Budget Max € (Optionnel)">
-                        <button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter la catégorie</button>
+                        <input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)">
+                        <button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button>
                     </form>
                     <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
@@ -234,7 +216,7 @@
                 <h3 style="text-align:left;">📈 Répartition</h3>
                 <canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas>
                 <div style="margin-top:12px; font-size:0.8em; color:#666;">
-                    <input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)
+                    <input type="checkbox" id="toggle-proportional"> Taux d'effort
                 </div>
                 <div id="proportional-container" style="display:none; text-align:left;"></div>
             </div>
@@ -250,12 +232,12 @@
                         <label style="flex:1;"><input type="radio" name="trans-type" value="expense" checked> Dépense</label>
                         <label style="flex:1;"><input type="radio" name="trans-type" value="income"> Revenu</label>
                     </div>
-                    <input type="text" id="desc" placeholder="Description (Ex: Courses)" required>
+                    <input type="text" id="desc" placeholder="Description" required>
                     <input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
                     <select id="payer" required></select>
                     <select id="category" required></select>
                     <div id="goal-selector-group" style="display:none;"><select id="goal-selector"></select></div>
-                    <button type="submit">Enregistrer l'opération</button>
+                    <button type="submit">Enregistrer</button>
                 </form>
             </div>
             
@@ -272,7 +254,8 @@
                 </div>
             </div>
         </div>
-    </div> </main>
+    </div> 
+</main>
 
 <script type="module" src="app.js"></script>
 </body>
