@@ -108,20 +108,15 @@
         .badge-important { border-left: 4px solid #f1c40f; font-weight: bold; }
         
         /* ========================================= */
-        /* 📱 RESPONSIVE DESIGN (MOBILE & TABLETTES) */
+        /* 📱 RESPONSIVE DESIGN (MOBILE) */
         /* ========================================= */
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
-            
             .main-content { margin-left: 0 !important; padding: 15px; width: 100vw; max-width: 100vw; overflow-x: hidden; }
-            
-            /* Abandon de la grille pour Flexbox sur mobile afin de bloquer les débordements */
             .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; }
             .layout-split { display: flex; flex-direction: column; gap: 15px; width: 100%; }
-            
             .card { padding: 15px; width: 100%; box-sizing: border-box; }
-            
             .action-bar { flex-direction: column; align-items: stretch; }
             .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 5px !important; }
             .action-bar-spacer { display: none; }
@@ -135,9 +130,10 @@
 
 <div id="reminder-popup" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.8);">
     <div class="auth-box" style="background: var(--card-bg); color: var(--text); border: 3px solid var(--primary);">
-        <h2 style="color: var(--primary); margin-top:0;">🔔 Rappels</h2>
+        <h2 style="color: var(--primary); margin-top:0;">🔔 Rappels en cours</h2>
+        <p style="font-size:0.9em; color:#666;">Ne les oubliez pas !</p>
         <ul id="reminder-list" style="list-style:none; padding:0; text-align:left; max-height: 200px; overflow-y: auto; margin-bottom:20px;"></ul>
-        <button id="btn-close-reminder" style="background: var(--secondary); color:#333; margin-top:0;">Fermer</button>
+        <button id="btn-close-reminder" style="background: var(--secondary); color:#333; margin-top:0;">Compris, fermer</button>
     </div>
 </div>
 
@@ -151,18 +147,19 @@
             <button type="submit" id="auth-submit-btn">Se connecter</button>
         </form>
         <p id="auth-error" style="color:#E74C3C; display:none; font-size:0.85em; margin-top:15px; font-weight:bold;"></p>
-        <span id="auth-toggle-mode" style="font-size:0.85em; color:var(--primary); cursor:pointer; display:block; margin-top:20px; text-decoration: underline;">S'inscrire</span>
+        <span id="auth-toggle-mode" style="font-size:0.85em; color:var(--primary); cursor:pointer; display:block; margin-top:20px; text-decoration: underline;">Pas encore de compte ? S'inscrire</span>
     </div>
 </div>
 
 <div id="screen-setup" class="fullscreen-overlay" style="display:none;">
     <div class="auth-box">
         <h2>🏠 Configuration</h2>
+        <p style="font-size:0.9em; color:#666; margin-bottom: 25px;">Rejoignez un budget existant ou créez le vôtre.</p>
         <input type="text" id="setup-pseudo" placeholder="Votre Prénom (Ex: Thomas)" required style="margin-bottom: 25px; text-align:center; font-weight:bold; border: 2px solid var(--primary);">
         <input type="text" id="join-code" placeholder="CODE PARTENAIRE" style="text-align:center; text-transform:uppercase; font-weight: bold; letter-spacing: 2px;">
         <button id="btn-join-budget" style="background:var(--secondary); color:#333;">Rejoindre le budget</button>
         <div style="margin: 25px 0; color:#aaa; font-size:0.8em;">— OU —</div>
-        <button id="btn-create-budget">Créer un foyer</button>
+        <button id="btn-create-budget">Créer un nouveau foyer</button>
     </div>
 </div>
 
@@ -172,6 +169,7 @@
         <li id="nav-dashboard" class="nav-item active">📊 Dashboard</li>
         <li id="nav-calendar" class="nav-item">📅 Calendrier</li>
         <li id="nav-profile" class="nav-item">👤 Mon Profil</li>
+        <li id="nav-admin" class="nav-item" style="display:none; background:#d35400; color:white; margin-top:20px;">👑 Administration</li>
     </ul>
     <div class="sidebar-footer">
         <button id="logout-btn" style="background:#E74C3C; margin-top:0;">🔓 Déconnexion</button>
@@ -212,14 +210,14 @@
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
                     <input type="date" id="ev-date" required>
-                    <input type="text" id="ev-title" placeholder="Titre" required>
+                    <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste)" required>
                     <select id="ev-type" required><option value="perso">👤 Personnel</option><option value="pro">💼 Professionnel</option></select>
                     <div style="margin:15px 0; background:rgba(231, 76, 60, 0.1); padding:10px; border-radius:8px;">
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:bold; color:#e74c3c;"><input type="checkbox" id="ev-important"> ⚠️ Important</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:bold; color:#e74c3c;"><input type="checkbox" id="ev-important"> ⚠️ Événement Important</label>
                     </div>
                     <label style="font-size:0.85em; font-weight:bold;">🔔 M'alerter via Pop-up :</label>
-                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
-                    <button type="submit">Ajouter</button>
+                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun rappel</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
+                    <button type="submit">Ajouter au calendrier</button>
                 </form>
             </div>
         </div>
@@ -229,15 +227,50 @@
         <h2 style="color:var(--primary); margin-top:0; margin-bottom: 20px;">👤 Mon Profil & Foyer</h2>
         <div class="card" style="margin-bottom: 25px;">
             <h3 style="margin-top:0;">Inviter un partenaire</h3>
+            <p style="font-size:0.9em; margin-bottom:5px;">Donnez ce code à la personne avec qui vous partagez ce budget :</p>
             <h2 id="display-invite-code" style="text-align:center; color:var(--primary); letter-spacing:8px; margin:15px 0; background:var(--bg); padding:15px; border-radius:8px; border: 2px dashed var(--secondary); word-break: break-all;">---</h2>
         </div>
         <div class="card">
-            <h3 style="margin-top:0;">Mon Prénom</h3>
+            <h3 style="margin-top:0;">Mes informations</h3>
+            <label style="font-weight: bold; font-size: 0.9em;">Mon Prénom dans l'application</label>
             <div style="display:flex; gap:10px; align-items: center;">
                 <input type="text" id="admin-pseudo" placeholder="Ex: Thomas" style="flex:1;">
                 <button id="btn-update-pseudo" class="btn-small" style="background:var(--secondary); color:#333;">Enregistrer</button>
             </div>
-            <p id="profile-success" style="color:#2ecc71; font-size:0.85em; display:none; margin:10px 0 0 0; font-weight: bold;">✓ Mis à jour !</p>
+            <p id="profile-success" style="color:#2ecc71; font-size:0.85em; display:none; margin:10px 0 0 0; font-weight: bold;">✓ Profil mis à jour !</p>
+        </div>
+    </div>
+
+    <div id="view-admin" style="display:none;">
+        <h2 style="color:#d35400; margin-top:0;">👑 Panneau d'Administration</h2>
+        <p style="color:#666;">Vue restreinte. Vous seul avez accès à ces données.</p>
+        
+        <div class="grid-stats">
+            <div class="card" style="border-top: 4px solid #3498db;">
+                <h3>👥 Total Utilisateurs</h3>
+                <span id="admin-tot-users" class="balance">0</span>
+            </div>
+            <div class="card" style="border-top: 4px solid #2ecc71;">
+                <h3>🏠 Foyers Actifs</h3>
+                <span id="admin-tot-budgets" class="balance">0</span>
+            </div>
+        </div>
+
+        <div class="layout-split" style="margin-top:25px;">
+            <div class="card" style="overflow-x:auto;">
+                <h3 style="margin-top:0;">Base Utilisateurs</h3>
+                <table style="min-width: 400px; font-size:0.85em;">
+                    <thead style="background:rgba(0,0,0,0.05);"><tr><th>Email</th><th>ID User</th><th>ID Foyer</th><th>Actions</th></tr></thead>
+                    <tbody id="admin-user-list"></tbody>
+                </table>
+            </div>
+            <div class="card" style="overflow-x:auto;">
+                <h3 style="margin-top:0;">Gestion des Foyers</h3>
+                <table style="min-width: 400px; font-size:0.85em;">
+                    <thead style="background:rgba(0,0,0,0.05);"><tr><th>Code</th><th>Créateur (ID)</th><th>Actions</th></tr></thead>
+                    <tbody id="admin-budget-list"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -255,12 +288,12 @@
             <div class="layout-split">
                 <div>
                     <h4 style="margin-top:0;">🎯 Objectifs d'épargne</h4>
-                    <form id="goal-form"><input type="text" id="goal-name" placeholder="Ex: Voyage" required><input type="number" id="goal-target" placeholder="Cible €" required><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button></form>
+                    <form id="goal-form"><input type="text" id="goal-name" placeholder="Ex: Voyage" required><input type="number" id="goal-target" placeholder="Cible €" required><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter l'objectif</button></form>
                     <ul id="goal-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
                 <div>
                     <h4 style="margin-top:0;">📂 Catégories de budget</h4>
-                    <form id="category-form"><div style="display:flex; gap:8px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;"><input type="text" id="new-cat-name" placeholder="Nom" required></div><input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)"><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button></form>
+                    <form id="category-form"><div style="display:flex; gap:8px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;"><input type="text" id="new-cat-name" placeholder="Nom" required></div><input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)"><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter la catégorie</button></form>
                     <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
             </div>
@@ -278,15 +311,15 @@
 
         <div class="grid-stats">
             <div class="card">
-                <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
                 <div class="card-content"><span id="solde-actuel" class="balance">0.00 €</span><p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p></div>
             </div>
             <div class="card">
-                <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
                 <div class="card-content"><span id="total-depenses" class="balance" style="color:#e74c3c">0.00 €</span></div>
             </div>
             <div class="card" style="text-align:center;">
-                <div class="card-header"><h3 style="text-align:left;">📈 Répartition</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-header"><h3 style="text-align:left;">📈 Répartition</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
                 <div class="card-content"><canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas><div style="margin-top:12px; font-size:0.8em; color:#666;"><input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)</div><div id="proportional-container" style="display:none; text-align:left;"></div></div>
             </div>
         </div>
@@ -294,8 +327,9 @@
         <div id="goals-container" class="grid-stats"></div>
 
         <div class="layout-split" style="margin-top:25px;">
+            
             <div class="card">
-                <div class="card-header"><h3>➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-header"><h3>➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
                 <div class="card-content">
                     <form id="expense-form">
                         <div style="display:flex; gap:15px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px; flex-wrap: wrap;"><label style="flex:1;"><input type="radio" name="trans-type" value="expense" checked> Dépense</label><label style="flex:1;"><input type="radio" name="trans-type" value="income"> Revenu</label></div>
