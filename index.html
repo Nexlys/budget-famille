@@ -14,18 +14,45 @@
         body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
         body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
 
-        /* --- DÉCORATIONS THÈMES PANDAS --- */
-        .main-content { position: relative; z-index: 1; }
-        .main-content::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; background-size: cover; background-position: center; background-attachment: fixed; pointer-events: none; }
+        /* ==========================================================================
+           🐼🎋 DÉCORATIONS THÈMES PANDAS (CORRECTION FOND MOBILE) 🎋🦊
+           ========================================================================== */
+        
+        /* 1. Le fond est maintenant accroché à l'écran global (body) et non plus au contenu */
+        body::before {
+            content: ''; 
+            position: fixed; /* Reste fixé à la vitre de l'écran */
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh; /* Force 100% de l'écran, même dézoomé */
+            z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; 
+            background-size: cover; background-position: center; pointer-events: none;
+        }
+
         .sidebar-footer { position: relative; }
-        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
+        .sidebar-footer::before { 
+            content: ''; display: block; height: 120px; margin-bottom: 10px; 
+            background-size: contain; background-repeat: no-repeat; background-position: center bottom; 
+            opacity: 0; transition: opacity 0.3s ease-in-out; 
+        }
 
-        body.theme-panda-geant .main-content::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
-        body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
-        body.theme-panda-roux .main-content::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
-        body.theme-panda-roux .sidebar-footer::before { opacity: 1; background-image: url('icone-roux.png'); }
+        /* --- ACTIVATION PANDA GÉANT 🐼 --- */
+        body.theme-panda-geant::before { 
+            opacity: 1; 
+            background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('fond-panda.jpg'); 
+        }
+        body.theme-panda-geant .sidebar-footer::before { 
+            opacity: 1; background-image: url('icone-panda.png'); 
+        }
 
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; display: flex; min-height: 100vh; overflow-x: hidden; }
+        /* --- ACTIVATION PANDA ROUX 🦊 --- */
+        body.theme-panda-roux::before { 
+            opacity: 1; 
+            background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); 
+        }
+        body.theme-panda-roux .sidebar-footer::before { 
+            opacity: 1; background-image: url('icone-roux.png'); 
+        }
+        /* ========================================================================== */
         
         /* --- SIDEBAR --- */
         .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: transform 0.3s ease; z-index: 1001; box-sizing: border-box; }
