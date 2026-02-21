@@ -7,6 +7,12 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* ==========================================================================
+           🛡️ SÉCURITÉ ANTI-DÉBORDEMENT (Empêche la page de se décaler à droite)
+           ========================================================================== */
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { max-width: 100%; overflow-x: hidden; position: relative; width: 100vw; margin: 0; padding: 0; }
+
         /* --- LES THEMES DE COULEURS --- */
         :root { --primary: #4A90E2; --secondary: #50E3C2; --bg: #F4F7F6; --text: #333; --card-bg: #FFF; --border: #ddd; --sidebar-bg: #2C3E50; --sidebar-text: #ecf0f1; }
         body.theme-dark { --primary: #6ab0ff; --secondary: #50E3C2; --bg: #121212; --text: #f0f0f0; --card-bg: #1e1e1e; --border: #333; --sidebar-bg: #000; --sidebar-text: #fff; }
@@ -14,89 +20,64 @@
         body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
         body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
 
-        /* ==========================================================================
-           🐼🎋 DÉCORATIONS THÈMES PANDAS (CORRECTION FOND MOBILE) 🎋🦊
-           ========================================================================== */
-        
-        /* 1. Le fond est maintenant accroché à l'écran global (body) et non plus au contenu */
-        body::before {
-            content: ''; 
-            position: fixed; /* Reste fixé à la vitre de l'écran */
-            top: 0; left: 0; 
-            width: 100vw; height: 100vh; /* Force 100% de l'écran, même dézoomé */
+        /* --- DÉCORATIONS THÈMES PANDAS (Fond fixé à l'écran) --- */
+        body::before { 
+            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
             z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; 
-            background-size: cover; background-position: center; pointer-events: none;
+            background-size: cover; background-position: center; pointer-events: none; 
         }
-
         .sidebar-footer { position: relative; }
-        .sidebar-footer::before { 
-            content: ''; display: block; height: 120px; margin-bottom: 10px; 
-            background-size: contain; background-repeat: no-repeat; background-position: center bottom; 
-            opacity: 0; transition: opacity 0.3s ease-in-out; 
-        }
+        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
 
-        /* --- ACTIVATION PANDA GÉANT 🐼 --- */
-        body.theme-panda-geant::before { 
-            opacity: 1; 
-            background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); 
-        }
-        body.theme-panda-geant .sidebar-footer::before { 
-            opacity: 1; background-image: url('bb-panda-menu.png'); 
-        }
+        body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
+        body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
+        body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
+        body.theme-panda-roux .sidebar-footer::before { opacity: 1; background-image: url('icone-roux.png'); }
 
-        /* --- ACTIVATION PANDA ROUX 🦊 --- */
-        body.theme-panda-roux::before { 
-            opacity: 1; 
-            background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); 
-        }
-        body.theme-panda-roux .sidebar-footer::before { 
-            opacity: 1; background-image: url('icone-roux.png'); 
-        }
-        /* ========================================================================== */
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); transition: 0.3s; display: flex; min-height: 100vh; }
         
         /* --- SIDEBAR --- */
-        .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: transform 0.3s ease; z-index: 1001; box-sizing: border-box; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: transform 0.3s ease; z-index: 1001; }
         .sidebar.collapsed { transform: translateX(-260px); }
-        .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: margin-left 0.3s ease; width: 100%; box-sizing: border-box; }
+        .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: margin-left 0.3s ease; width: 100%; max-width: 100%; }
         .main-content.expanded { margin-left: 0; }
         .sidebar h2 { font-size: 1.4em; margin-bottom: 30px; text-align: center; color: var(--secondary); white-space: nowrap; }
-        .nav-menu { list-style: none; padding: 0; flex: 1; }
+        .nav-menu { list-style: none; padding: 0; flex: 1; margin: 0; }
         .nav-item { padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; font-weight: 500; }
         .nav-item:hover { background: rgba(255,255,255,0.1); }
         .nav-item.active { background: var(--primary); color: white; }
         .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
 
-        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; opacity: 0; transition: opacity 0.3s ease; }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; opacity: 0; transition: opacity 0.3s ease; }
         .mobile-overlay.active { display: block; opacity: 1; }
 
         /* --- HEADER & ACTIONS --- */
-        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; }
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap; width: 100%; }
         .toggle-sidebar-btn { background: var(--sidebar-bg); color: white; border: none; width: 42px !important; height: 42px !important; border-radius: 8px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 0 !important; padding: 0 !important; }
         .toggle-sidebar-btn:hover { background: var(--primary); }
         #theme-selector { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; outline: none; }
-        .action-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; align-items: center; }
+        .action-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; align-items: center; width: 100%; }
         .action-bar-spacer { flex-grow: 1; }
 
         /* --- POPUPS ET AUTH --- */
-        .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; box-sizing: border-box; }
+        .fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
         .auth-box { background: var(--card-bg); padding: 35px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
 
         /* --- GRILLES ET CARTES --- */
-        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; align-items: start; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; }
+        .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; align-items: start; width: 100%; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; max-width: 100%; overflow-x: hidden; }
         
-        /* ⬇️ NOUVEAU: STYLE POUR LA RÉDUCTION DES CARTES ⬇️ */
+        /* Réduction des cartes */
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .card-header h3 { margin: 0 !important; }
         .toggle-card-btn { background: transparent !important; color: var(--text) !important; border: none !important; box-shadow: none !important; font-size: 1.3em !important; padding: 10px !important; margin: -10px !important; width: auto !important; min-width: auto !important; cursor: pointer; opacity: 0.6; transition: 0.2s; outline: none; }
-        .toggle-card-btn:hover { opacity: 1; transform: scale(1.2); }
-        .card-content { transition: opacity 0.3s; }
-        /* ⬆️ FIN NOUVEAU STYLE ⬆️ */
+        .toggle-card-btn:hover { opacity: 1; transform: scale(1.1); }
+        .card-content { transition: opacity 0.3s; width: 100%; }
 
         .balance { font-size: 1.8em; font-weight: bold; margin: 10px 0; display: block;}
         
-        input, select { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
+        input, select { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); }
         button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; transition: 0.2s; }
         button:hover { opacity: 0.9; }
         .btn-small { width: auto !important; margin: 0 !important; padding: 10px 15px !important; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
@@ -105,13 +86,13 @@
         .progress-fill { height: 100%; transition: 0.6s ease; }
         .green { background: #2ECC71; } .orange { background: #f39c12; } .red { background: #E74C3C; }
 
-        .table-container { padding: 0; overflow-x: auto; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .table-container { padding: 0; width: 100%; overflow-x: auto; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
 
         /* --- CALENDRIER --- */
-        .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: var(--primary); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: var(--primary); width: 100%; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; width: 100%; }
         .calendar-day { min-height: 80px; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: rgba(0,0,0,0.02); font-size: 0.8em; display: flex; flex-direction: column; gap: 2px; }
         .calendar-day.empty { background: transparent; border: none; }
         .calendar-day .day-num { font-weight: bold; margin-bottom: 2px; text-align: right; color: var(--text); }
@@ -123,12 +104,19 @@
         .badge-perso { background: #4A90E2; } .badge-pro { background: #9b59b6; }
         .badge-important { border-left: 4px solid #f1c40f; font-weight: bold; }
         
+        /* ========================================= */
+        /* 📱 RESPONSIVE DESIGN (MOBILE & TABLETTES) */
+        /* ========================================= */
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
-            .main-content { margin-left: 0 !important; padding: 15px; max-width: 100vw; }
-            .grid-stats { grid-template-columns: 1fr; gap: 15px; }
-            .layout-split { grid-template-columns: 1fr; }
+            
+            /* Sécurité renforcée pour le contenu sur mobile */
+            .main-content { margin-left: 0 !important; padding: 10px; width: 100%; max-width: 100vw; overflow-x: hidden; }
+            .grid-stats { grid-template-columns: 1fr; gap: 15px; width: 100%; }
+            .layout-split { grid-template-columns: 1fr; width: 100%; }
+            .card { padding: 15px; width: 100%; }
+            
             .action-bar { flex-direction: column; align-items: stretch; }
             .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 5px !important; }
             .action-bar-spacer { display: none; }
@@ -205,9 +193,9 @@
         <div class="layout-split">
             <div class="card" style="flex: 2;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <button id="cal-prev" class="btn-small">⬅️ Mois Préc.</button>
+                    <button id="cal-prev" class="btn-small">⬅️ Préc.</button>
                     <h3 id="cal-month-display" style="margin:0;">---</h3>
-                    <button id="cal-next" class="btn-small">Mois Suiv. ➡️</button>
+                    <button id="cal-next" class="btn-small">Suiv. ➡️</button>
                 </div>
                 <div style="margin-bottom:15px; font-size:0.9em; display:flex; gap:15px; align-items:center; background:var(--bg); padding:10px; border-radius:8px;">
                     <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" id="cal-show-expenses" checked> 💰 Afficher transactions</label>
@@ -236,7 +224,7 @@
         <h2 style="color:var(--primary); margin-top:0; margin-bottom: 20px;">👤 Mon Profil & Foyer</h2>
         <div class="card" style="margin-bottom: 25px;">
             <h3 style="margin-top:0;">Inviter un partenaire</h3>
-            <h2 id="display-invite-code" style="text-align:center; color:var(--primary); letter-spacing:8px; margin:15px 0; background:var(--bg); padding:15px; border-radius:8px; border: 2px dashed var(--secondary);">---</h2>
+            <h2 id="display-invite-code" style="text-align:center; color:var(--primary); letter-spacing:8px; margin:15px 0; background:var(--bg); padding:15px; border-radius:8px; border: 2px dashed var(--secondary); word-break: break-all;">---</h2>
         </div>
         <div class="card">
             <h3 style="margin-top:0;">Mon Prénom</h3>
@@ -278,48 +266,24 @@
 
         <div class="grid-stats">
             <div class="card">
-                <div class="card-header">
-                    <h3>💰 Solde restant</h3>
-                    <button type="button" class="toggle-card-btn" title="Réduire">➖</button>
-                </div>
-                <div class="card-content">
-                    <span id="solde-actuel" class="balance">0.00 €</span>
-                    <p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p>
-                </div>
+                <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-content"><span id="solde-actuel" class="balance">0.00 €</span><p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p></div>
             </div>
-            
             <div class="card">
-                <div class="card-header">
-                    <h3>📊 Dépenses totales</h3>
-                    <button type="button" class="toggle-card-btn" title="Réduire">➖</button>
-                </div>
-                <div class="card-content">
-                    <span id="total-depenses" class="balance" style="color:#e74c3c">0.00 €</span>
-                </div>
+                <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-content"><span id="total-depenses" class="balance" style="color:#e74c3c">0.00 €</span></div>
             </div>
-            
             <div class="card" style="text-align:center;">
-                <div class="card-header">
-                    <h3 style="text-align:left;">📈 Répartition</h3>
-                    <button type="button" class="toggle-card-btn" title="Réduire">➖</button>
-                </div>
-                <div class="card-content">
-                    <canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas>
-                    <div style="margin-top:12px; font-size:0.8em; color:#666;"><input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)</div>
-                    <div id="proportional-container" style="display:none; text-align:left;"></div>
-                </div>
+                <div class="card-header"><h3 style="text-align:left;">📈 Répartition</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-content"><canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas><div style="margin-top:12px; font-size:0.8em; color:#666;"><input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)</div><div id="proportional-container" style="display:none; text-align:left;"></div></div>
             </div>
         </div>
         
         <div id="goals-container" class="grid-stats"></div>
 
         <div class="layout-split" style="margin-top:25px;">
-            
             <div class="card">
-                <div class="card-header">
-                    <h3>➕ Nouvelle Opération</h3>
-                    <button type="button" class="toggle-card-btn" title="Réduire">➖</button>
-                </div>
+                <div class="card-header"><h3>➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
                 <div class="card-content">
                     <form id="expense-form">
                         <div style="display:flex; gap:15px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px; flex-wrap: wrap;"><label style="flex:1;"><input type="radio" name="trans-type" value="expense" checked> Dépense</label><label style="flex:1;"><input type="radio" name="trans-type" value="income"> Revenu</label></div>
@@ -330,7 +294,6 @@
                     </form>
                 </div>
             </div>
-            
             <div>
                 <div style="display:flex; gap:10px; margin-bottom:12px;"><input type="text" id="search-bar" placeholder="🔍 Rechercher..." style="margin-top:0;"><button id="export-btn" class="btn-small" style="background:var(--secondary); color:#333; margin-top:0 !important;">📥 CSV</button></div>
                 <div class="table-container"><table><thead style="background:rgba(0,0,0,0.02);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Prix</th><th>Action</th></tr></thead><tbody id="expense-list"></tbody></table></div>
