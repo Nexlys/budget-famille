@@ -34,12 +34,29 @@ document.addEventListener('DOMContentLoaded', () => {
     let goals = [], expenses = [], customCategories = [], members = [];
     let myChart = null, myAnnualChart = null, currentSearch = "", showAnnual = false, showEnvelopes = false;
 
-    // --- NAVIGATION SPA ---
+    // --- NAVIGATION SPA ET MOBILE ---
+    function handleMobileSidebar() {
+        // Sur mobile (<= 850px), on retire la classe 'mobile-open' pour cacher le menu
+        if (window.innerWidth <= 850) {
+            sidebar.classList.remove('mobile-open');
+        }
+    }
+
     function setActiveNav(targetId) {
         navItems.forEach(item => item.classList.remove('active'));
         document.getElementById(targetId)?.classList.add('active');
-        if (window.innerWidth <= 850) { sidebar.classList.add('collapsed'); mainContent.classList.remove('expanded'); }
+        handleMobileSidebar();
     }
+
+    // Gestion du bouton "Hamburger" (☰)
+    toggleBtn?.addEventListener('click', () => {
+        if (window.innerWidth <= 850) {
+            sidebar.classList.toggle('mobile-open'); // Mobile : on glisse le menu
+        } else {
+            sidebar.classList.toggle('collapsed'); // PC : on plie le menu
+            mainContent.classList.toggle('expanded');
+        }
+    });
 
     document.getElementById('nav-dashboard')?.addEventListener('click', () => {
         viewDashboard.style.display = 'block'; viewProfile.style.display = 'none'; setActiveNav('nav-dashboard'); window.scrollTo(0,0);
@@ -47,10 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('nav-profile')?.addEventListener('click', () => {
         viewDashboard.style.display = 'none'; viewProfile.style.display = 'block'; setActiveNav('nav-profile'); window.scrollTo(0,0);
-    });
-
-    toggleBtn?.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded');
     });
 
     // --- NOUVEAUX BOUTONS DASHBOARD ---
@@ -167,12 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // CORRECTION ENVELOPPES
     function renderEnvelopes(catSums) {
         const envContainer = document.getElementById('envelopes-section'); if(!envContainer) return;
         envContainer.innerHTML = '';
-        
-        // On cherche les catégories qui ont une limite définie
         const envelopeCats = customCategories.filter(c => c.limit && c.limit > 0);
         
         if (envelopeCats.length === 0) {
