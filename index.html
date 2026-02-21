@@ -13,17 +13,22 @@
         *, *::before, *::after { box-sizing: border-box; }
         html, body { max-width: 100%; overflow-x: hidden; position: relative; width: 100vw; margin: 0; padding: 0; }
 
-        /* --- LES THEMES --- */
+        /* --- LES THEMES DE COULEURS --- */
         :root { --primary: #4A90E2; --secondary: #50E3C2; --bg: #F4F7F6; --text: #333; --card-bg: #FFF; --border: #ddd; --sidebar-bg: #2C3E50; --sidebar-text: #ecf0f1; }
         body.theme-dark { --primary: #6ab0ff; --secondary: #50E3C2; --bg: #121212; --text: #f0f0f0; --card-bg: #1e1e1e; --border: #333; --sidebar-bg: #000; --sidebar-text: #fff; }
         body.theme-cosy { --primary: #D4A373; --secondary: #A9AF7E; --bg: #FAEDCD; --text: #5E503F; --card-bg: #FEFAE0; --border: #E9EDC9; --sidebar-bg: #5E503F; --sidebar-text: #FEFAE0; }
         body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
         body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
 
-        /* --- DÉCORATIONS PANDAS --- */
-        body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; opacity: 0; transition: opacity 0.5s ease; background-size: cover; background-position: center; pointer-events: none; }
+        /* --- DÉCORATIONS THÈMES PANDAS (Fond fixé à l'écran) --- */
+        body::before { 
+            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; 
+            background-size: cover; background-position: center; pointer-events: none; 
+        }
         .sidebar-footer { position: relative; }
-        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease; }
+        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
+
         body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
         body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
         body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
@@ -61,11 +66,11 @@
         /* --- GRILLES ET CARTES --- */
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; align-items: start; width: 100%; }
-        
-        /* CORRECTION MINEURE : min-width: 0 permet aux éléments de ne pas s'étirer à l'infini */
         .grid-stats > div, .layout-split > div { min-width: 0; }
 
         .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; }
+        
+        /* Réduction des cartes (pour les 4 blocs principaux) */
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .card-header h3 { margin: 0 !important; }
         .toggle-card-btn { background: transparent !important; color: var(--text) !important; border: none !important; box-shadow: none !important; font-size: 1.3em !important; padding: 10px !important; margin: -10px !important; width: auto !important; min-width: auto !important; cursor: pointer; opacity: 0.6; transition: 0.2s; outline: none; }
@@ -83,7 +88,7 @@
         .progress-fill { height: 100%; transition: 0.6s ease; }
         .green { background: #2ECC71; } .orange { background: #f39c12; } .red { background: #E74C3C; }
 
-        /* CORRECTION DU TABLEAU : Ajout de -webkit-overflow-scrolling pour iOS */
+        /* Tableau Mobile Friendly avec défilement tactile fluide */
         .table-container { padding: 0; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
@@ -111,7 +116,7 @@
             
             .main-content { margin-left: 0 !important; padding: 15px; width: 100vw; max-width: 100vw; overflow-x: hidden; }
             
-            /* LA VRAIE CORRECTION : On abandonne la Grille pour le Flexbox sur mobile ! */
+            /* Abandon de la grille pour Flexbox sur mobile afin de bloquer les débordements */
             .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; }
             .layout-split { display: flex; flex-direction: column; gap: 15px; width: 100%; }
             
@@ -261,8 +266,15 @@
             </div>
         </div>
 
-        <div id="annual-section" class="card" style="display:none; margin-bottom:25px;"><h3>📈 Évolution Annuelle</h3><canvas id="annualChart" style="max-height:280px;"></canvas></div>
-        <div id="envelopes-section" class="grid-stats" style="display:none; margin-bottom:25px;"></div>
+        <div id="annual-section" class="card" style="display:none; margin-bottom:25px;">
+            <h3 style="margin-top:0;">📈 Évolution Annuelle</h3>
+            <canvas id="annualChart" style="max-height:280px;"></canvas>
+        </div>
+
+        <div id="envelopes-section" class="card" style="display:none; margin-bottom:25px;">
+            <h3 style="margin-top:0;">✉️ Enveloppes</h3>
+            <div id="envelopes-section-content"></div>
+        </div>
 
         <div class="grid-stats">
             <div class="card">

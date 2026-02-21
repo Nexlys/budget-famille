@@ -18,6 +18,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- ÉLÉMENTS UI ---
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
     const toggleBtn = document.getElementById('toggle-sidebar');
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewCalendar = document.getElementById('view-calendar');
     const navItems = document.querySelectorAll('.nav-item');
 
+    // --- ÉTATS GLOBAUX ---
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
     let goals = [], expenses = [], customCategories = [], members = [], eventsData = [];
@@ -40,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let calYear = new Date().getFullYear();
     let reminderPopupShown = false;
 
-    // --- NAVIGATION SPA ---
+    // --- NAVIGATION SPA & MOBILE ---
     function handleMobileSidebar() {
         if (window.innerWidth <= 850) {
             sidebar.classList.remove('mobile-open');
@@ -81,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setActiveNav('nav-calendar'); window.scrollTo(0,0); renderCalendar();
     });
 
-    // --- RAPPELS ---
+    // --- RAPPELS CALENDRIER (POP-UP) ---
     function checkReminders() {
         if(reminderPopupShown) return;
         const todayTime = new Date().setHours(0,0,0,0);
@@ -112,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('btn-close-reminder')?.addEventListener('click', () => { document.getElementById('reminder-popup').style.display = 'none'; });
 
-    // --- CALENDRIER ---
+    // --- CALENDRIER LOGIQUE ---
     document.getElementById('cal-prev')?.addEventListener('click', () => { calMonth--; if(calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); });
     document.getElementById('cal-next')?.addEventListener('click', () => { calMonth++; if(calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); });
     document.getElementById('cal-show-expenses')?.addEventListener('change', renderCalendar);
@@ -158,20 +160,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }); e.target.reset(); alert("Événement ajouté !");
     });
 
-    // --- BOUTONS DASHBOARD ---
+    // --- BOUTONS DASHBOARD BARRE D'ACTIONS ---
     document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => {
-        showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'grid' : 'none';
-        e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)'; updateUI();
+        showEnvelopes = !showEnvelopes; 
+        document.getElementById('envelopes-section').style.display = showEnvelopes ? 'block' : 'none';
+        e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)'; 
+        e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)'; 
+        updateUI();
     });
+    
     document.getElementById('btn-toggle-annual')?.addEventListener('click', (e) => {
         showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none';
         e.target.style.background = showAnnual ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showAnnual ? '#fff' : 'var(--text)'; updateUI();
     });
+    
     document.getElementById('btn-toggle-admin')?.addEventListener('click', () => {
         const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none';
     });
 
-    // --- UPDATE UI ---
+    // --- RENDU UI DASHBOARD ---
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
         list.innerHTML = ""; const m = parseInt(document.getElementById('filter-month').value); const y = parseInt(document.getElementById('filter-year').value);
@@ -217,28 +224,68 @@ document.addEventListener('DOMContentLoaded', () => {
         if(showEnvelopes) renderEnvelopes(catSums); if(showAnnual) renderAnnualChart(); renderCalendar();
     }
 
-    // (Toutes les autres fonctions render restent identiques...)
     function renderMembers() {
         const sel = document.getElementById('payer'); if(!sel) return;
         sel.innerHTML = ''; members.forEach(m => sel.appendChild(new Option(m.name, m.id)));
         if(auth.currentUser) sel.value = auth.currentUser.uid;
     }
+    
     function renderCategories() {
         const sel = document.getElementById('category'); const list = document.getElementById('category-manage-list'); if(!sel || !list) return;
         sel.innerHTML = '<option value="">-- Choisir --</option>'; customCategories.forEach(c => sel.appendChild(new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`)));
         list.innerHTML = ""; customCategories.forEach(c => { const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; padding:8px; background:rgba(0,0,0,0.03); border-radius:6px; margin-bottom:5px;"; li.innerHTML = `<span>${c.emoji} ${c.name}</span> <button class="delete-cat" data-id="${c.id}" style="width:auto; padding:2px 10px; margin:0; background:#e74c3c;">✕</button>`; list.appendChild(li); });
     }
+    
     function renderGoals() {
         const cont = document.getElementById('goals-container'); const sel = document.getElementById('goal-selector'); if(!cont || !sel) return;
         cont.innerHTML = ""; sel.innerHTML = '<option value="">-- Lier à un objectif --</option>';
         goals.forEach(g => { const p = Math.min((g.current / g.target) * 100, 100); const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<h3>🎯 ${g.name}</h3><p>${g.current.toFixed(0)}€ / ${g.target}€</p><div class="progress-bar"><div class="progress-fill green" style="width:${p}%"></div></div>`; cont.appendChild(card); sel.appendChild(new Option(g.name, g.id)); });
     }
+    
+    // ENVELOPPES (Version améliorée, injectée dans la carte)
     function renderEnvelopes(catSums) {
-        const envContainer = document.getElementById('envelopes-section'); if(!envContainer) return;
-        envContainer.innerHTML = ''; const envelopeCats = customCategories.filter(c => c.limit && c.limit > 0);
-        if (envelopeCats.length === 0) { envContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:20px; color:#888;">✉️ Aucune enveloppe définie.</div>'; return; }
-        envelopeCats.forEach(cat => { const spent = catSums[`${cat.emoji} ${cat.name}`] || 0; const p = Math.min((spent / cat.limit) * 100, 100); const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<h3>${cat.emoji} ${cat.name}</h3><p>${spent.toFixed(2)}€ / ${cat.limit}€</p><div class="progress-bar"><div class="progress-fill ${p > 90 ? 'red' : (p > 70 ? 'orange' : 'green')}" style="width:${p}%"></div></div>`; envContainer.appendChild(card); });
+        const envContent = document.getElementById('envelopes-section-content'); 
+        if(!envContent) return;
+        envContent.innerHTML = ''; 
+        
+        const envelopeCats = customCategories.filter(c => c.limit && c.limit > 0);
+        
+        if (envelopeCats.length === 0) { 
+            envContent.innerHTML = '<p style="text-align:center; padding:10px; color:#888; margin:0;">✉️ Aucune enveloppe définie. Ajoutez un "Budget Max" à vos catégories dans l\'administration !</p>'; 
+            return; 
+        }
+
+        const gridDiv = document.createElement('div');
+        gridDiv.style.display = 'grid';
+        gridDiv.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
+        gridDiv.style.gap = '15px';
+
+        envelopeCats.forEach(cat => { 
+            const spent = catSums[`${cat.emoji} ${cat.name}`] || 0; 
+            const p = Math.min((spent / cat.limit) * 100, 100); 
+            
+            const envDiv = document.createElement('div');
+            envDiv.style.background = 'rgba(0,0,0,0.02)';
+            envDiv.style.border = '1px solid var(--border)';
+            envDiv.style.padding = '15px';
+            envDiv.style.borderRadius = '8px';
+            
+            envDiv.innerHTML = `
+                <h4 style="margin:0 0 5px 0;">${cat.emoji} ${cat.name}</h4>
+                <div style="display:flex; justify-content:space-between; font-size:0.85em; margin-bottom:5px;">
+                    <span style="font-weight:bold;">${spent.toFixed(2)}€</span>
+                    <span style="color:#888;">/ ${cat.limit}€</span>
+                </div>
+                <div class="progress-bar" style="margin-top:0;">
+                    <div class="progress-fill ${p > 90 ? 'red' : (p > 70 ? 'orange' : 'green')}" style="width:${p}%"></div>
+                </div>
+            `; 
+            gridDiv.appendChild(envDiv); 
+        });
+        
+        envContent.appendChild(gridDiv);
     }
+    
     function renderAnnualChart() {
         const ctx = document.getElementById('annualChart')?.getContext('2d'); if(!ctx) return;
         const monthlyData = new Array(12).fill(0).map(() => ({ inc: 0, exp: 0 }));
@@ -247,9 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
         myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: '#2ecc71' }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: '#e74c3c' }] }, options: { responsive: true, maintainAspectRatio: false } });
     }
 
+    // --- CHARGEMENT DATA FIREBASE ---
     function loadBudgetData() {
         screenSetup.style.display = 'none'; screenApp.style.display = 'block';
         getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(d => { if(d.exists()) document.getElementById('display-invite-code').innerText = d.data().code; });
+        
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/members`), s => { members = []; s.forEach(doc => members.push({ id: doc.id, ...doc.data() })); const me = members.find(mbr => mbr.id === auth.currentUser.uid); if(me && document.getElementById('admin-pseudo')) document.getElementById('admin-pseudo').value = me.name; renderMembers(); updateUI(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => { expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); updateUI(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), s => { customCategories = []; s.forEach(doc => customCategories.push({ id: doc.id, ...doc.data() })); renderCategories(); updateUI(); }));
@@ -280,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return alert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }); window.location.reload(); } else { alert("Code introuvable !"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- EVENEMENTS GLOBAUX ---
+    // --- ÉVÉNEMENTS GLOBAUX ---
     const fM = document.getElementById('filter-month'), fY = document.getElementById('filter-year');
     if(fM && fY) { ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'].forEach((m, i) => fM.appendChild(new Option(m, i))); const dNow = new Date(); for(let i = dNow.getFullYear()-1; i <= dNow.getFullYear()+1; i++) fY.appendChild(new Option(i, i)); fM.value = dNow.getMonth(); fY.value = dNow.getFullYear(); fM.addEventListener('change', updateUI); fY.addEventListener('change', updateUI); }
     
@@ -289,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('theme-selector')?.addEventListener('change', (e) => { document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`; localStorage.setItem('budgetTheme', e.target.value); });
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
 
-    // Formulaire d'Opération
+    // Formulaires d'ajout (Dépenses, Catégories, Objectifs)
     document.getElementById('expense-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const type = document.querySelector('input[name="trans-type"]:checked').value; const amount = parseFloat(document.getElementById('amount').value); const cat = document.getElementById('category').value;
@@ -301,9 +350,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
-    // ⬇️ NOUVEAU: GESTION DE LA RÉDUCTION DES CARTES (COLLAPSE) ⬇️
+    // --- GESTION DES CLICS DYNAMIQUES (RÉDUCTION & SUPPRESSION) ---
     document.addEventListener('click', async (e) => {
-        // Clic sur bouton réduire "➖"
+        // Bouton réduire "➖"
         if(e.target.classList.contains('toggle-card-btn')) {
             const btn = e.target;
             const content = btn.closest('.card').querySelector('.card-content');
@@ -312,14 +361,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 content.style.display = isHidden ? 'block' : 'none';
                 btn.innerHTML = isHidden ? '➖' : '➕';
             }
-            return; // On arrête l'exécution ici pour ne pas supprimer d'élément
+            return; 
         }
-        
-        // Clics suppression
+        // Boutons suppression (Poubelle / Croix)
         if(e.target.classList.contains('delete-exp')) { if(confirm("Supprimer l'opération ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-cat')) { if(confirm("Supprimer la catégorie ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-ev')) { if(confirm("Supprimer cet événement du calendrier ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/events`, e.target.dataset.id)); }
     });
 
+    // Barre de recherche
     document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
 });
