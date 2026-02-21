@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-// 🔴 🔴 🔴 REMPLACEZ PAR VOTRE CONFIGURATION FIREBASE 🔴 🔴 🔴
+// 🔴 CONFIGURATION FIREBASE
 const firebaseConfig = {
     apiKey: "VOTRE_API_KEY",
     authDomain: "VOTRE_PROJET.firebaseapp.com",
@@ -16,101 +16,94 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// On attend que le HTML soit chargé pour éviter l'erreur "null"
 document.addEventListener('DOMContentLoaded', () => {
+    let CURRENT_BUDGET_ID = null;
+    let unsubscribers = [];
+    let goals = [], expenses = [], customCategories = [];
+    let isPanelOpen = false, myChart = null, myAnnualChart = null;
+    let currentSort = { column: 'date', asc: false }, currentSearch = "";
+    let showAnnual = false, showEnvelopes = false;
 
-    // --- VARIABLES MULTI-LOCATAIRES ---
-    let CURRENT_BUDGET_ID = null; 
-    let unsubscribers = []; 
-
-    // Variables UI
-    let goals = []; let expenses = []; let customCategories = [];
-    let isPanelOpen = false; let myChart = null; let myAnnualChart = null;
-    let currentSort = { column: 'date', asc: false };
-    let currentSearch = ""; let showAnnual = false; let showEnvelopes = false;
-
-    // --- GESTION DU THÈME ---
+    // --- THÈMES ---
     const themeSelector = document.getElementById('theme-selector');
     const savedTheme = localStorage.getItem('budgetTheme') || 'light';
     document.body.className = savedTheme === 'light' ? '' : `theme-${savedTheme}`;
-    if(themeSelector) themeSelector.value = savedTheme;
+    if (themeSelector) {
+        themeSelector.value = savedTheme;
+        themeSelector.addEventListener('change', (e) => {
+            document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`;
+            localStorage.setItem('budgetTheme', e.target.value);
+        });
+    }
 
-    themeSelector?.addEventListener('change', (e) => {
-        document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`;
-        localStorage.setItem('budgetTheme', e.target.value);
-    });
-
+    // --- FILTRES ---
     const filterMonth = document.getElementById('filter-month');
     const filterYear = document.getElementById('filter-year');
-    const d = new Date();
-    if(filterYear) {
-        for(let i = d.getFullYear() - 1; i <= d.getFullYear() + 1; i++) { filterYear.appendChild(new Option(i, i)); }
+    if (filterMonth && filterYear) {
+        const d = new Date();
+        for (let i = d.getFullYear() - 1; i <= d.getFullYear() + 1; i++) {
+            filterYear.appendChild(new Option(i, i));
+        }
         filterYear.value = d.getFullYear();
+        filterMonth.value = d.getMonth();
+        filterMonth.addEventListener('change', updateUI);
+        filterYear.addEventListener('change', updateUI);
     }
-    if(filterMonth) filterMonth.value = d.getMonth();
+    document.getElementById('search-bar')?.addEventListener('input', (e) => {
+        currentSearch = e.target.value.toLowerCase();
+        updateUI();
+    });
 
-    filterMonth?.addEventListener('change', updateUI);
-    filterYear?.addEventListener('change', updateUI);
-    document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
-
-    // --- GESTION DE L'AUTHENTIFICATION ---
-    const screenAuth = document.getElementById('screen-auth');
-    const screenSetup = document.getElementById('screen-setup');
-    const screenApp = document.getElementById('screen-app');
-    const authTitle = document.getElementById('auth-title');
-    const authSubmitBtn = document.getElementById('auth-submit-btn');
-    const authToggleMode = document.getElementById('auth-toggle-mode'); // ID Corrigé ici
-
+    // --- AUTHENTIFICATION ---
+    const authToggle = document.getElementById('auth-toggle-mode');
     let isLoginMode = true;
-
-    authToggleMode?.addEventListener('click', () => {
+    authToggle?.addEventListener('click', () => {
         isLoginMode = !isLoginMode;
-        authTitle.innerText = isLoginMode ? "Se connecter" : "Créer un compte";
-        authSubmitBtn.innerText = isLoginMode ? "Connexion" : "Inscription";
-        authToggleMode.innerText = isLoginMode ? "Pas de compte ? S'inscrire ici." : "Déjà un compte ? Se connecter.";
+        document.getElementById('auth-title').innerText = isLoginMode ? "Se connecter" : "Créer un compte";
+        document.getElementById('auth-submit-btn').innerText = isLoginMode ? "Connexion" : "Inscription";
+        authToggle.innerText = isLoginMode ? "Pas de compte ? S'inscrire ici." : "Déjà un compte ? Se connecter.";
     });
 
     document.getElementById('login-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('auth-email').value;
         const pwd = document.getElementById('auth-password').value;
+        const errEl = document.getElementById('auth-error');
         try {
-            if(isLoginMode) await signInWithEmailAndPassword(auth, email, pwd);
+            if (isLoginMode) await signInWithEmailAndPassword(auth, email, pwd);
             else await createUserWithEmailAndPassword(auth, email, pwd);
-        } catch(err) {
-            const errEl = document.getElementById('auth-error');
+            errEl.style.display = 'none';
+        } catch (err) {
             errEl.style.display = 'block';
-            errEl.innerText = "Erreur : Vérifiez l'email et le mot de passe (6 car. min)";
+            errEl.innerText = "Erreur d'authentification (Mdp: 6 car. min)";
         }
     });
 
-    // --- ROUTEUR D'ÉTAT ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            if(screenAuth) screenAuth.style.display = 'none';
+            document.getElementById('screen-auth').style.display = 'none';
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists() && userDoc.data().budgetId) {
                 CURRENT_BUDGET_ID = userDoc.data().budgetId;
                 loadBudgetData();
             } else {
-                if(screenSetup) screenSetup.style.display = 'flex';
-                if(screenApp) screenApp.style.display = 'none';
+                document.getElementById('screen-setup').style.display = 'flex';
+                document.getElementById('screen-app').style.display = 'none';
             }
         } else {
-            if(screenAuth) screenAuth.style.display = 'flex';
-            if(screenSetup) screenSetup.style.display = 'none';
-            if(screenApp) screenApp.style.display = 'none';
+            document.getElementById('screen-auth').style.display = 'flex';
+            document.getElementById('screen-setup').style.display = 'none';
+            document.getElementById('screen-app').style.display = 'none';
             CURRENT_BUDGET_ID = null;
-            unsubscribers.forEach(unsub => unsub());
-            unsubscribers = [];
+            unsubscribers.forEach(un => un());
         }
     });
 
-    // --- CRÉATION / JONCTION DE FOYER ---
+    // --- FOYER ---
     document.getElementById('btn-create-budget')?.addEventListener('click', async () => {
-        const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const newBudgetRef = await addDoc(collection(db, "budgets"), { code: inviteCode, owner: auth.currentUser.uid });
-        await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: newBudgetRef.id });
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid });
+        await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: ref.id });
         window.location.reload();
     });
 
@@ -121,39 +114,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!snap.empty) {
             await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: snap.docs[0].id });
             window.location.reload();
-        } else {
-            document.getElementById('join-error').style.display = 'block';
-        }
+        } else document.getElementById('join-error').style.display = 'block';
     });
 
-    // --- CHARGEMENT DES DONNÉES ---
     function loadBudgetData() {
-        if(screenSetup) screenSetup.style.display = 'none';
-        if(screenApp) screenApp.style.display = 'block';
-
-        getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(bDoc => {
-            if(bDoc.exists()) document.getElementById('display-invite-code').innerText = bDoc.data().code;
+        document.getElementById('screen-setup').style.display = 'none';
+        document.getElementById('screen-app').style.display = 'block';
+        getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(d => {
+            if(d.exists()) document.getElementById('display-invite-code').innerText = d.data().code;
         });
-
-        const subExp = onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), (snapshot) => {
-            expenses = []; snapshot.forEach(d => expenses.push({ id: d.id, ...d.data() }));
-            updateUI();
-        });
-
-        const subCat = onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), (snapshot) => {
-            customCategories = []; snapshot.forEach(d => customCategories.push({ id: d.id, ...d.data() }));
-            renderCategories(); updateUI();
-        });
-
-        const subGoal = onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), (snapshot) => {
-            goals = []; snapshot.forEach(d => goals.push({ id: d.id, ...d.data() }));
-            renderGoals();
-        });
-
-        unsubscribers.push(subExp, subCat, subGoal);
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => {
+            expenses = []; s.forEach(d => expenses.push({ id: d.id, ...d.data() })); updateUI();
+        }));
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), s => {
+            customCategories = []; s.forEach(d => customCategories.push({ id: d.id, ...d.data() })); renderCategories(); updateUI();
+        }));
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), s => {
+            goals = []; s.forEach(d => goals.push({ id: d.id, ...d.data() })); renderGoals();
+        }));
     }
 
-    // --- UI ET ACTIONS ---
+    // --- ACTIONS ---
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
     document.getElementById('btn-cancel-setup')?.addEventListener('click', () => signOut(auth));
     document.getElementById('login-btn')?.addEventListener('click', () => {
@@ -161,117 +142,106 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('admin-panel').style.display = isPanelOpen ? 'block' : 'none';
     });
 
-    // (Reste des fonctions UI comme addDoc, deleteDoc, updateUI, etc. intégrées ci-dessous)
+    document.getElementById('toggle-annual-btn')?.addEventListener('click', (e) => {
+        showAnnual = !showAnnual; e.target.classList.toggle('active');
+        document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none';
+        if(showAnnual) updateUI();
+    });
+
+    document.getElementById('toggle-envelopes-btn')?.addEventListener('click', (e) => {
+        showEnvelopes = !showEnvelopes; e.target.classList.toggle('active');
+        document.getElementById('envelopes-section').style.display = showEnvelopes ? 'grid' : 'none';
+        if(showEnvelopes) updateUI();
+    });
 
     document.getElementById('category-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { 
-            emoji: document.getElementById('new-cat-emoji').value, 
-            name: document.getElementById('new-cat-name').value, 
-            limit: document.getElementById('new-cat-limit').value ? parseFloat(document.getElementById('new-cat-limit').value) : null,
-            isActive: true 
+        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), {
+            emoji: document.getElementById('new-cat-emoji').value,
+            name: document.getElementById('new-cat-name').value,
+            limit: parseFloat(document.getElementById('new-cat-limit').value) || null,
+            isActive: true
         });
         e.target.reset();
     });
 
-    document.getElementById('goal-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), {
-            name: document.getElementById('goal-name').value,
-            current: parseFloat(document.getElementById('goal-current').value),
-            target: parseFloat(document.getElementById('goal-target').value)
-        });
-        e.target.reset();
-    });
-
-    document.getElementById('expense-form')?.addEventListener('submit', async function(e) {
+    document.getElementById('expense-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const type = document.querySelector('input[name="trans-type"]:checked').value;
         const amount = parseFloat(document.getElementById('amount').value);
-        const category = document.getElementById('category').value;
-        
-        if (type === 'expense' && (category.toLowerCase().includes("épargne") || category.toLowerCase().includes("objectif"))) {
-            const goalId = document.getElementById('goal-selector').value;
-            const g = goals.find(x => x.id === goalId);
-            if(g) await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, goalId), { current: g.current + amount });
+        const cat = document.getElementById('category').value;
+        if (type === 'expense' && cat.toLowerCase().includes("épargne")) {
+            const gid = document.getElementById('goal-selector').value;
+            const g = goals.find(x => x.id === gid);
+            if(g) await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: g.current + amount });
         }
-
         await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), {
-            date: new Date().toLocaleDateString('fr-FR'),
-            timestamp: Date.now(),
-            desc: document.getElementById('desc').value,
-            amount: amount,
-            payer: document.getElementById('payer').value,
-            category: category,
-            type: type
+            date: new Date().toLocaleDateString('fr-FR'), timestamp: Date.now(),
+            desc: document.getElementById('desc').value, amount, payer: document.getElementById('payer').value, category: cat, type
         });
         e.target.reset();
     });
 
-    function renderCategories() {
-        const sel = document.getElementById('category');
-        const list = document.getElementById('category-manage-list');
-        if(!sel || !list) return;
-        sel.innerHTML = '<option value="">-- Catégorie --</option>';
-        customCategories.filter(c => c.isActive !== false).forEach(c => sel.appendChild(new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`)));
-        list.innerHTML = '';
-        customCategories.forEach(c => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${c.emoji} ${c.name}</span> <button class="danger-btn delete-cat" data-id="${c.id}" style="width:auto; padding:5px;">🗑️</button>`;
-            list.appendChild(li);
-        });
-    }
-
-    function renderGoals() {
-        const cont = document.getElementById('goals-container');
-        const sel = document.getElementById('goal-selector');
-        if(!cont || !sel) return;
-        cont.innerHTML = ''; sel.innerHTML = '<option value="">-- Objectif --</option>';
-        goals.forEach(g => {
-            const p = Math.min((g.current / g.target) * 100, 100);
-            const card = document.createElement('div'); card.className = 'card';
-            card.innerHTML = `<h3>🎯 ${g.name}</h3><p>${g.current}€ / ${g.target}€</p><div class="progress-bar"><div class="progress-fill green" style="width:${p}%"></div></div>`;
-            cont.appendChild(card);
-            sel.appendChild(new Option(g.name, g.id));
-        });
-    }
-
     function updateUI() {
-        const list = document.getElementById('expense-list');
-        if(!list) return;
+        const list = document.getElementById('expense-list'); if(!list) return;
         list.innerHTML = '';
-        const m = parseInt(filterMonth.value);
-        const y = parseInt(filterYear.value);
-
-        let filtered = expenses.filter(e => {
-            const d = new Date(e.timestamp);
-            return d.getMonth() === m && d.getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch));
-        });
-
+        const m = parseInt(filterMonth.value), y = parseInt(filterYear.value);
         let rev = 0, dep = 0;
-        filtered.forEach(e => {
+        const catSums = {};
+
+        expenses.filter(e => {
+            const dt = new Date(e.timestamp);
+            return dt.getMonth() === m && dt.getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch));
+        }).forEach(e => {
             const isInc = e.type === 'income';
             isInc ? rev += e.amount : dep += e.amount;
+            if(!isInc) catSums[e.category] = (catSums[e.category] || 0) + e.amount;
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td>${e.category}</td><td>${e.payer}</td><td style="color:${isInc ? '#2ECC71' : '#E74C3C'}">${isInc ? '+' : '-'}${e.amount}€</td><td><button class="delete-exp" data-id="${e.id}">🗑️</button></td>`;
+            tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td>${e.category}</td><td>${e.payer}</td><td style="color:${isInc ? '#2ECC71' : '#E74C3C'}"><strong>${isInc?'+':'-'}${e.amount}€</strong></td><td style="text-align:center"><button class="delete-exp" data-id="${e.id}">🗑️</button></td>`;
             list.appendChild(tr);
         });
 
         document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €';
         document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
         const solde = rev - dep;
-        const soldeEl = document.getElementById('solde-actuel');
-        soldeEl.innerText = solde.toFixed(2) + ' €';
-        soldeEl.className = 'balance ' + (solde >= 0 ? 'positive' : '');
+        const sEl = document.getElementById('solde-actuel');
+        sEl.innerText = solde.toFixed(2) + ' €';
+        sEl.className = 'balance ' + (solde >= 0 ? 'positive' : '');
+
+        // Graphique Camembert
+        const ctx = document.getElementById('expenseChart')?.getContext('2d');
+        if (ctx) {
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catSums), datasets: [{ data: Object.values(catSums), backgroundColor: ['#4A90E2', '#FF6B6B', '#50E3C2', '#FDCB6E'] }] }, options: { plugins: { legend: { display: false } } } });
+        }
     }
 
-    // Nettoyage des écouteurs de suppression
+    function renderCategories() {
+        const sel = document.getElementById('category'); if(!sel) return;
+        sel.innerHTML = '<option value="">-- Catégorie --</option>';
+        customCategories.forEach(c => sel.appendChild(new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`)));
+        const list = document.getElementById('category-manage-list'); if(!list) return;
+        list.innerHTML = '';
+        customCategories.forEach(c => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${c.emoji} ${c.name}</span> <button class="delete-cat" data-id="${c.id}">🗑️</button>`;
+            list.appendChild(li);
+        });
+    }
+
+    function renderGoals() {
+        const cont = document.getElementById('goals-container'); if(!cont) return;
+        cont.innerHTML = '';
+        goals.forEach(g => {
+            const p = Math.min((g.current / g.target) * 100, 100);
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<h3>🎯 ${g.name}</h3><p>${g.current}€ / ${g.target}€</p><div class="progress-bar"><div class="progress-fill green" style="width:${p}%"></div></div>`;
+            cont.appendChild(card);
+        });
+    }
+
     document.addEventListener('click', async (e) => {
-        if(e.target.classList.contains('delete-exp')) {
-            if(confirm("Supprimer ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id));
-        }
-        if(e.target.classList.contains('delete-cat')) {
-            await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id));
-        }
+        if (e.target.classList.contains('delete-exp')) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id));
+        if (e.target.classList.contains('delete-cat')) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id));
     });
 });
