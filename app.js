@@ -4,13 +4,12 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, si
 
 // 🔴 REMPLACEZ PAR VOS CLÉS FIREBASE
 const firebaseConfig = {
-  apiKey: "AIzaSyBRx9Cq4O2FfJu-2rQFYsoY4xzBcEV29pw",
-  authDomain: "projet-duo.firebaseapp.com",
-  projectId: "projet-duo",
-  storageBucket: "projet-duo.firebasestorage.app",
-  messagingSenderId: "963400986667",
-  appId: "1:963400986667:web:458602ba323ee1adf33a6e",
-  measurementId: "G-DJMM6FLJZN"
+    apiKey: "VOTRE_CLE",
+    authDomain: "VOTRE_PROJET.firebaseapp.com",
+    projectId: "VOTRE_PROJET",
+    storageBucket: "VOTRE_PROJET.appspot.com",
+    messagingSenderId: "VOTRE_ID",
+    appId: "VOTRE_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -25,15 +24,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const screenSetup = document.getElementById('screen-setup');
     const screenApp = document.getElementById('screen-app');
 
+    // Vues SPA
+    const viewDashboard = document.getElementById('view-dashboard');
+    const viewProfile = document.getElementById('view-profile');
+    const navItems = document.querySelectorAll('.nav-item');
+
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
     let goals = [], expenses = [], customCategories = [], members = [];
     let myChart = null, myAnnualChart = null, currentSearch = "", showAnnual = false, showEnvelopes = false;
 
-    // --- SIDEBAR ---
+    // --- NAVIGATION SPA ---
+    function setActiveNav(targetId) {
+        navItems.forEach(item => item.classList.remove('active'));
+        document.getElementById(targetId)?.classList.add('active');
+        if (window.innerWidth <= 850) { sidebar.classList.add('collapsed'); mainContent.classList.remove('expanded'); }
+    }
+
+    document.getElementById('nav-dashboard')?.addEventListener('click', () => {
+        viewDashboard.style.display = 'block'; viewProfile.style.display = 'none'; setActiveNav('nav-dashboard'); window.scrollTo(0,0);
+    });
+
+    document.getElementById('nav-profile')?.addEventListener('click', () => {
+        viewDashboard.style.display = 'none'; viewProfile.style.display = 'block'; setActiveNav('nav-profile'); window.scrollTo(0,0);
+    });
+
+    // Autres boutons menu
     toggleBtn?.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-        mainContent.classList.toggle('expanded');
+        sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded');
+    });
+
+    document.getElementById('nav-envelopes')?.addEventListener('click', () => {
+        showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'grid' : 'none'; updateUI();
+    });
+
+    document.getElementById('nav-annual')?.addEventListener('click', () => {
+        showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none'; updateUI();
+    });
+
+    document.getElementById('nav-admin')?.addEventListener('click', () => {
+        const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        setActiveNav('nav-admin'); viewDashboard.style.display = 'block'; viewProfile.style.display = 'none'; window.scrollTo(0,0);
     });
 
     // --- MISE À JOUR DE L'INTERFACE ---
@@ -44,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const y = parseInt(document.getElementById('filter-year').value);
         let rev = 0, dep = 0, catSums = {};
         
-        // Préparation des stats par membre
         let memberStats = {};
         members.forEach(mbr => memberStats[mbr.id] = { name: mbr.name, rev: 0, dep: 0 });
 
@@ -53,8 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return dt.getMonth() === m && dt.getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch));
         }).forEach(e => {
             const isInc = e.type === 'income';
-            
-            // Compatibilité : retrouver le membre lié à la dépense
             let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
             if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
             const pName = memberStats[currentPayerId].name;
@@ -73,12 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('solde-actuel').innerText = solde.toFixed(2) + ' €';
         document.getElementById('solde-actuel').style.color = solde >= 0 ? '#2ecc71' : '#e74c3c';
 
-        // Taux d'effort dynamique
         const propContainer = document.getElementById('proportional-container');
         if(propContainer) {
             propContainer.innerHTML = '';
             Object.values(memberStats).forEach(stat => {
-                if(stat.rev === 0 && stat.dep === 0) return; // Ne pas afficher si aucune activité
+                if(stat.rev === 0 && stat.dep === 0) return;
                 const pct = stat.rev > 0 ? Math.min((stat.dep / stat.rev) * 100, 100) : 0;
                 propContainer.innerHTML += `
                     <p style="font-size:0.85em; margin: 10px 0 5px 0; display:flex; justify-content:space-between; color:var(--text);">
@@ -105,10 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!sel) return;
         sel.innerHTML = '';
         members.forEach(m => sel.appendChild(new Option(m.name, m.id)));
-        if(auth.currentUser) sel.value = auth.currentUser.uid; // Sélectionne l'utilisateur par défaut
+        if(auth.currentUser) sel.value = auth.currentUser.uid;
     }
 
-    // --- AUTRES RENDUS ---
     function renderCategories() {
         const sel = document.getElementById('category'); const list = document.getElementById('category-manage-list');
         if(!sel || !list) return;
@@ -163,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if(d.exists()) document.getElementById('display-invite-code').innerText = d.data().code;
         });
         
-        // NOUVEAU : Écoute des membres du Foyer
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/members`), s => {
             members = []; s.forEach(doc => members.push({ id: doc.id, ...doc.data() }));
             const me = members.find(mbr => mbr.id === auth.currentUser.uid);
@@ -213,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // CREER OU REJOINDRE
     document.getElementById('btn-create-budget')?.addEventListener('click', async () => {
         const pseudo = document.getElementById('setup-pseudo').value.trim();
         if(!pseudo) return alert("Veuillez entrer votre prénom pour commencer.");
@@ -238,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { document.getElementById('join-error').style.display = 'block'; }
     });
 
-    // MAJ PROFIL ADMIN
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => {
         const newName = document.getElementById('admin-pseudo').value.trim();
         if(newName && CURRENT_BUDGET_ID) {
@@ -248,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- EVENEMENTS UI ---
+    // --- EVENEMENTS UI RESTANTS ---
     const fM = document.getElementById('filter-month'), fY = document.getElementById('filter-year');
     if(fM && fY) {
         ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'].forEach((m, i) => fM.appendChild(new Option(m, i)));
@@ -271,18 +294,19 @@ document.addEventListener('DOMContentLoaded', () => {
         l.innerText = isLog ? "Déjà un compte ? Connexion" : "Pas encore de compte ? S'inscrire";
     });
 
-    document.getElementById('nav-admin')?.addEventListener('click', () => {
-        const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('theme-selector')?.addEventListener('change', (e) => {
+        document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`;
+        localStorage.setItem('budgetTheme', e.target.value);
     });
+
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
 
-    // AJOUT DÉPENSE
     document.getElementById('expense-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const type = document.querySelector('input[name="trans-type"]:checked').value;
         const amount = parseFloat(document.getElementById('amount').value);
         const cat = document.getElementById('category').value;
-        const payerId = document.getElementById('payer').value; // Sauvegarde l'ID de la personne
+        const payerId = document.getElementById('payer').value; 
         
         if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) {
             const gid = document.getElementById('goal-selector').value;
@@ -313,4 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(e.target.classList.contains('delete-exp')) { if(confirm("Supprimer l'opération ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-cat')) { if(confirm("Supprimer la catégorie ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id)); }
     });
+
+    document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
 });
