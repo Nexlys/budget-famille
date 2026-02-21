@@ -28,8 +28,27 @@
 
         /* --- HEADER & BARRE D'ACTIONS --- */
         .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; }
-        .toggle-sidebar-btn { background: var(--sidebar-bg); color: white; border: none; min-width: 42px; height: 42px; border-radius: 8px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        /* CORRECTION DU BOUTON MENU : On force la taille et on annule les marges globales */
+        .toggle-sidebar-btn { 
+            background: var(--sidebar-bg); 
+            color: white; 
+            border: none; 
+            width: 42px !important; 
+            height: 42px !important; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 1.4em; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: 0.2s; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin: 0 !important;
+            padding: 0 !important;
+        }
         .toggle-sidebar-btn:hover { background: var(--primary); }
+        
         #theme-selector { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; outline: none; }
 
         .action-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; align-items: center; }
@@ -45,10 +64,13 @@
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .balance { font-size: 1.8em; font-weight: bold; margin: 10px 0; display: block;}
         
+        /* Formulaires et Boutons Globaux */
         input, select { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
         button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; transition: 0.2s; }
         button:hover { opacity: 0.9; }
-        .btn-small { width: auto; margin: 0; padding: 10px 15px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
+        
+        /* Boutons d'actions sécurisés contre le width:100% */
+        .btn-small { width: auto !important; margin: 0 !important; padding: 10px 15px !important; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
 
         .progress-bar { width: 100%; background: var(--border); border-radius: 10px; height: 12px; overflow: hidden; margin-top: 10px; }
         .progress-fill { height: 100%; transition: 0.6s ease; }
@@ -63,25 +85,19 @@
         /* 📱 RESPONSIVE DESIGN (MOBILE & TABLETTES) */
         /* ========================================= */
         @media (max-width: 850px) {
-            /* 1. Comportement du menu */
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
             .main-content { margin-left: 0 !important; padding: 15px; }
-            
-            /* 2. Empilement des grilles */
             .layout-split { grid-template-columns: 1fr; }
             .grid-stats { grid-template-columns: 1fr; gap: 15px; }
             
-            /* 3. Ajustement de la barre d'actions (Boutons en colonne) */
+            /* Ajustement de la barre d'actions (Boutons en colonne sur mobile) */
             .action-bar { flex-direction: column; align-items: stretch; }
-            .action-bar > select, .action-bar > button { width: 100%; margin-bottom: 5px; }
+            .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 5px !important; }
             .action-bar-spacer { display: none; }
             
-            /* 4. Barre du haut */
             .top-header { margin-bottom: 15px; }
             #theme-selector { padding: 8px; }
-            
-            /* 5. Panneaux Admin */
             .auth-box { padding: 25px; }
         }
     </style>
@@ -246,7 +262,7 @@
             <div>
                 <div style="display:flex; gap:10px; margin-bottom:12px;">
                     <input type="text" id="search-bar" placeholder="🔍 Rechercher..." style="margin-top:0;">
-                    <button id="export-btn" class="btn-small" style="background:var(--secondary); color:#333;">📥 CSV</button>
+                    <button id="export-btn" class="btn-small" style="background:var(--secondary); color:#333; margin-top:0 !important;">📥 CSV</button>
                 </div>
                 <div class="table-container">
                     <table>
