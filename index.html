@@ -7,16 +7,66 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* --- LES THEMES --- */
+        /* --- LES THEMES DE COULEURS --- */
         :root { --primary: #4A90E2; --secondary: #50E3C2; --bg: #F4F7F6; --text: #333; --card-bg: #FFF; --border: #ddd; --sidebar-bg: #2C3E50; --sidebar-text: #ecf0f1; }
         body.theme-dark { --primary: #6ab0ff; --secondary: #50E3C2; --bg: #121212; --text: #f0f0f0; --card-bg: #1e1e1e; --border: #333; --sidebar-bg: #000; --sidebar-text: #fff; }
         body.theme-cosy { --primary: #D4A373; --secondary: #A9AF7E; --bg: #FAEDCD; --text: #5E503F; --card-bg: #FEFAE0; --border: #E9EDC9; --sidebar-bg: #5E503F; --sidebar-text: #FEFAE0; }
         
-        /* 🐼 NOUVEAU : THÈME PANDA GÉANT (Noir, Blanc, Vert Bambou) */
-        body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #F2F4F2; --text: #111; --card-bg: #FFF; --border: #CCC; --sidebar-bg: #1A1A1A; --sidebar-text: #FFF; }
+        /* 🐼 THÈME PANDA GÉANT (Noir, Blanc, Vert Bambou) */
+        body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
         
-        /* 🦊 NOUVEAU : THÈME PANDA ROUX (Rouille, Crème, Marron) */
-        body.theme-panda-roux { --primary: #D35400; --secondary: #F39C12; --bg: #FAF3E8; --text: #4A2311; --card-bg: #FFF; --border: #EADDCB; --sidebar-bg: #8E3514; --sidebar-text: #FDF4E3; }
+        /* 🦊 THÈME PANDA ROUX (Rouille, Crème, Marron) */
+        body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
+
+        /* ==========================================================================
+           🐼🎋 DÉCORATIONS THÈMES PANDAS (IMAGES D'AMBIANCE) 🎋🦊
+           ========================================================================== */
+        
+        /* 1. Configuration de base pour le fond d'ambiance */
+        .main-content { position: relative; z-index: 1; } /* Nécessaire pour superposer le fond */
+        .main-content::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1; /* Derrière le contenu */ opacity: 0; transition: opacity 0.5s ease-in-out;
+            background-size: cover; background-position: center; pointer-events: none;
+        }
+
+        /* 2. Configuration de base pour la mascotte du menu */
+        .sidebar-footer { position: relative; }
+        .sidebar-footer::before {
+            content: ''; display: block; height: 140px; margin-bottom: 10px;
+            background-size: contain; background-repeat: no-repeat; background-position: center bottom;
+            opacity: 0; transition: opacity 0.3s ease-in-out;
+        }
+
+        /* --- ACTIVATION PANDA GÉANT 🐼 --- */
+        /* Image de fond: Forêt de bambous (avec un filtre blanc transparent pour la lisibilité) */
+        body.theme-panda-geant .main-content::before {
+            opacity: 1;
+            /* REMPLACEZ LE LIEN CI-DESSOUS PAR VOTRE IMAGE LOCALE SI DÉSIRÉ */
+            background-image: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url('https://images.unsplash.com/photo-1564351038807-45498270910b?q=80&w=1974&auto=format&fit=crop');
+        }
+        /* Mascotte Menu */
+        body.theme-panda-geant .sidebar-footer::before {
+            opacity: 1;
+            /* REMPLACEZ LE LIEN CI-DESSOUS PAR VOTRE IMAGE LOCALE SI DÉSIRÉ */
+            background-image: url('https://cdn-icons-png.flaticon.com/512/3069/3069186.png'); 
+        }
+
+        /* --- ACTIVATION PANDA ROUX 🦊 --- */
+        /* Image de fond: Forêt automnale (avec un filtre crème transparent) */
+        body.theme-panda-roux .main-content::before {
+            opacity: 1;
+            /* REMPLACEZ LE LIEN CI-DESSOUS PAR VOTRE IMAGE LOCALE SI DÉSIRÉ */
+            background-image: linear-gradient(rgba(255,243,224,0.9), rgba(255,243,224,0.9)), url('https://images.unsplash.com/photo-1499543222496-d37c8f21e38b?q=80&w=2070&auto=format&fit=crop');
+        }
+        /* Mascotte Menu */
+        body.theme-panda-roux .sidebar-footer::before {
+            opacity: 1;
+             /* REMPLACEZ LE LIEN CI-DESSOUS PAR VOTRE IMAGE LOCALE SI DÉSIRÉ */
+            background-image: url('https://cdn-icons-png.flaticon.com/512/1998/1998766.png');
+        }
+        /* ========================================================================== */
+
 
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; display: flex; min-height: 100vh; overflow-x: hidden; }
         
@@ -153,7 +203,6 @@
         <button id="toggle-sidebar" class="toggle-sidebar-btn">☰</button>
         <div style="display:flex; align-items:center; gap:10px;">
             <span style="font-size:0.75em; color:#2ecc71; font-weight: bold; white-space: nowrap;">● Connecté</span>
-            
             <select id="theme-selector">
                 <option value="light">☀️ Clair</option>
                 <option value="dark">🌙 Sombre</option>
