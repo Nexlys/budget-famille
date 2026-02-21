@@ -13,7 +13,6 @@
 
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; display: flex; min-height: 100vh; overflow-x: hidden; }
         
-        /* --- SIDEBAR --- */
         .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: 0.3s ease; z-index: 1000; box-sizing: border-box; }
         .sidebar.collapsed { transform: translateX(-260px); }
         .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: 0.3s ease; width: 100%; box-sizing: border-box; }
@@ -26,17 +25,14 @@
         .nav-item.active { background: var(--primary); color: white; }
         .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
 
-        /* --- HEADER --- */
         .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; }
         .toggle-sidebar-btn { background: var(--sidebar-bg); color: white; border: none; width: 42px; height: 42px; border-radius: 8px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .toggle-sidebar-btn:hover { background: var(--primary); }
         #theme-selector { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; outline: none; }
 
-        /* --- ÉCRANS AUTH / SETUP --- */
         .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; box-sizing: border-box; }
         .auth-box { background: var(--card-bg); padding: 35px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
 
-        /* --- DASHBOARD & CARTES --- */
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; align-items: start; }
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
@@ -93,9 +89,6 @@
     <ul class="nav-menu">
         <li id="nav-dashboard" class="nav-item active">📊 Dashboard</li>
         <li id="nav-profile" class="nav-item">👤 Mon Profil</li>
-        <li id="nav-envelopes" class="nav-item">✉️ Enveloppes</li>
-        <li id="nav-annual" class="nav-item">📈 Annuel</li>
-        <li id="nav-admin" class="nav-item">⚙️ Catégories & Objectifs</li>
     </ul>
     <div class="sidebar-footer">
         <button id="logout-btn" style="background:#E74C3C; margin-top:0;">🔓 Déconnexion</button>
@@ -137,6 +130,15 @@
 
     <div id="view-dashboard">
         
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:25px; align-items:center;">
+            <select id="filter-month" style="width:auto; margin-top:0;"></select>
+            <select id="filter-year" style="width:auto; margin-top:0;"></select>
+            
+            <div style="flex-grow: 1;"></div> <button id="btn-toggle-annual" style="width:auto; margin:0; background:var(--card-bg); color:var(--text); border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.05); transition: 0.2s;">📈 Annuel</button>
+            <button id="btn-toggle-envelopes" style="width:auto; margin:0; background:var(--card-bg); color:var(--text); border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.05); transition: 0.2s;">✉️ Enveloppes</button>
+            <button id="btn-toggle-admin" style="width:auto; margin:0; background:var(--secondary); color:#333; box-shadow:0 2px 4px rgba(0,0,0,0.05);">⚙️ Catégories & Objectifs</button>
+        </div>
+
         <div id="admin-panel" class="card" style="display:none; margin-bottom:25px; border: 2px dashed var(--primary); background: rgba(74, 144, 226, 0.05);">
             <div class="layout-split">
                 <div>
@@ -161,11 +163,6 @@
                     <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
             </div>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-bottom:25px;">
-            <select id="filter-month" style="width:auto; margin-top:0;"></select>
-            <select id="filter-year" style="width:auto; margin-top:0;"></select>
         </div>
 
         <div id="annual-section" class="card" style="display:none; margin-bottom:25px;">
@@ -205,7 +202,7 @@
                         <label><input type="radio" name="trans-type" value="expense" checked> Dépense</label>
                         <label><input type="radio" name="trans-type" value="income"> Revenu</label>
                     </div>
-                    <input type="text" id="desc" placeholder="Description (Ex: Courses Casino)" required>
+                    <input type="text" id="desc" placeholder="Description (Ex: Courses)" required>
                     <input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
                     <select id="payer" required></select>
                     <select id="category" required></select>

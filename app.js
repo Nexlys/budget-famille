@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const screenSetup = document.getElementById('screen-setup');
     const screenApp = document.getElementById('screen-app');
 
-    // Vues SPA
     const viewDashboard = document.getElementById('view-dashboard');
     const viewProfile = document.getElementById('view-profile');
     const navItems = document.querySelectorAll('.nav-item');
@@ -50,22 +49,30 @@ document.addEventListener('DOMContentLoaded', () => {
         viewDashboard.style.display = 'none'; viewProfile.style.display = 'block'; setActiveNav('nav-profile'); window.scrollTo(0,0);
     });
 
-    // Autres boutons menu
     toggleBtn?.addEventListener('click', () => {
         sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded');
     });
 
-    document.getElementById('nav-envelopes')?.addEventListener('click', () => {
-        showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'grid' : 'none'; updateUI();
+    // --- NOUVEAUX BOUTONS DASHBOARD ---
+    document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => {
+        showEnvelopes = !showEnvelopes; 
+        document.getElementById('envelopes-section').style.display = showEnvelopes ? 'grid' : 'none';
+        e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)';
+        e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)';
+        updateUI();
     });
 
-    document.getElementById('nav-annual')?.addEventListener('click', () => {
-        showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none'; updateUI();
+    document.getElementById('btn-toggle-annual')?.addEventListener('click', (e) => {
+        showAnnual = !showAnnual; 
+        document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none';
+        e.target.style.background = showAnnual ? 'var(--primary)' : 'var(--card-bg)';
+        e.target.style.color = showAnnual ? '#fff' : 'var(--text)';
+        updateUI();
     });
 
-    document.getElementById('nav-admin')?.addEventListener('click', () => {
-        const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none';
-        setActiveNav('nav-admin'); viewDashboard.style.display = 'block'; viewProfile.style.display = 'none'; window.scrollTo(0,0);
+    document.getElementById('btn-toggle-admin')?.addEventListener('click', () => {
+        const p = document.getElementById('admin-panel'); 
+        p.style.display = p.style.display === 'none' ? 'block' : 'none';
     });
 
     // --- MISE À JOUR DE L'INTERFACE ---
@@ -129,8 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderMembers() {
-        const sel = document.getElementById('payer');
-        if(!sel) return;
+        const sel = document.getElementById('payer'); if(!sel) return;
         sel.innerHTML = '';
         members.forEach(m => sel.appendChild(new Option(m.name, m.id)));
         if(auth.currentUser) sel.value = auth.currentUser.uid;
@@ -161,10 +167,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // CORRECTION ENVELOPPES
     function renderEnvelopes(catSums) {
         const envContainer = document.getElementById('envelopes-section'); if(!envContainer) return;
         envContainer.innerHTML = '';
-        customCategories.filter(c => c.limit).forEach(cat => {
+        
+        // On cherche les catégories qui ont une limite définie
+        const envelopeCats = customCategories.filter(c => c.limit && c.limit > 0);
+        
+        if (envelopeCats.length === 0) {
+            envContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:20px; color:#888;">✉️ Aucune enveloppe définie. Modifiez vos catégories pour ajouter un "Budget Max" !</div>';
+            return;
+        }
+
+        envelopeCats.forEach(cat => {
             const spent = catSums[`${cat.emoji} ${cat.name}`] || 0; const p = Math.min((spent / cat.limit) * 100, 100);
             const card = document.createElement('div'); card.className = 'card';
             card.innerHTML = `<h3>${cat.emoji} ${cat.name}</h3><p>${spent.toFixed(2)}€ / ${cat.limit}€</p><div class="progress-bar"><div class="progress-fill ${p > 90 ? 'red' : (p > 70 ? 'orange' : 'green')}" style="width:${p}%"></div></div>`;
@@ -208,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    // --- AUTH ET CONFIGURATION FOYER ---
+    // --- AUTH ET CONFIGURATION ---
     document.getElementById('login-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('auth-email').value;
@@ -272,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- EVENEMENTS UI RESTANTS ---
+    // --- EVENEMENTS UI ---
     const fM = document.getElementById('filter-month'), fY = document.getElementById('filter-year');
     if(fM && fY) {
         ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'].forEach((m, i) => fM.appendChild(new Option(m, i)));
