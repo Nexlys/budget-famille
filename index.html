@@ -29,8 +29,8 @@
         .sidebar-footer { position: relative; }
         .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
 
-        body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('fond-panda.jpg'); }
-        body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('icone-panda.png'); }
+        body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
+        body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
         body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
         body.theme-panda-roux .sidebar-footer::before { opacity: 1; background-image: url('icone-roux.png'); }
 
@@ -213,6 +213,7 @@
                     <h3 id="cal-month-display" style="margin:0;">---</h3>
                     <button id="cal-next" class="btn-small">Suiv. ➡️</button>
                 </div>
+                
                 <div style="margin-bottom:15px; background:var(--bg); padding:12px; border-radius:8px;">
                     <label class="switch-container">
                         <div class="switch">
@@ -222,6 +223,7 @@
                         <span style="font-size: 0.95em; font-weight: 500;">💰 Afficher les transactions</span>
                     </label>
                 </div>
+
                 <div class="calendar-header-days"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
@@ -230,20 +232,32 @@
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
                     
-                    <div style="display:flex; gap:10px; margin-bottom:8px;">
-                        <div style="flex:1;">
-                            <label style="font-size:0.8em; font-weight:bold; color:var(--text); opacity:0.8;">Du :</label>
-                            <input type="date" id="ev-date-start" required style="margin-top:2px;">
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px;">
+                        
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                            <label style="font-size:0.85em; font-weight:bold; color:var(--text); width:50px;">Début:</label>
+                            <input type="date" id="ev-date-start" required style="margin-top:0; flex:2; padding:8px;">
+                            <input type="time" id="ev-time-start" style="margin-top:0; flex:1; padding:8px;" title="Heure (Optionnelle)">
                         </div>
-                        <div style="flex:1;">
-                            <label style="font-size:0.8em; font-weight:bold; color:var(--text); opacity:0.8;">Au :</label>
-                            <input type="date" id="ev-date-end" required style="margin-top:2px;">
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                            <label style="font-size:0.85em; font-weight:bold; color:var(--text); width:50px;">Fin:</label>
+                            <input type="date" id="ev-date-end" required style="margin-top:0; flex:2; padding:8px;">
+                            <input type="time" id="ev-time-end" style="margin-top:0; flex:1; padding:8px;" title="Heure (Optionnelle)">
                         </div>
                     </div>
 
-                    <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste)" required>
+                    <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste, Vacances...)" required>
                     
-                    <input type="text" id="ev-type" placeholder="Catégorie (Libre. Ex: Vacances, Pro...)" required>
+                    <input type="text" id="ev-type" placeholder="Catégorie (Libre. Ex: Santé, Pro...)" list="default-event-types" required>
+                    <datalist id="default-event-types">
+                        <option value="👤 Personnel"></option>
+                        <option value="💼 Professionnel"></option>
+                        <option value="🎉 Fête / Anniversaire"></option>
+                        <option value="🏥 Santé / RDV"></option>
+                        <option value="✈️ Vacances"></option>
+                        <option value="🛒 Courses / Achats"></option>
+                    </datalist>
 
                     <div style="margin:15px 0; background:rgba(231, 76, 60, 0.05); border: 1px solid rgba(231, 76, 60, 0.2); padding:12px; border-radius:8px;">
                         <label class="switch-container" style="color:#e74c3c; font-weight:bold;">
@@ -256,7 +270,7 @@
                     </div>
 
                     <label style="font-size:0.85em; font-weight:bold;">🔔 M'alerter via Pop-up :</label>
-                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
+                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun rappel</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
                     <button type="submit">Ajouter au calendrier</button>
                 </form>
             </div>
