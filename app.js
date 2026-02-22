@@ -1,5 +1,4 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-// NOUVEAU : Import pour le mode hors-ligne
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
@@ -17,7 +16,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// 🚀 NOUVEAU : ACTIVATION DU CACHE HORS-LIGNE
+// ACTIVATION DU CACHE HORS-LIGNE
 const db = initializeFirestore(app, {
     localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
 });
@@ -64,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
             isMaintenance = data.maintenance === true;
             const toggle = document.getElementById('admin-maintenance-toggle'); if(toggle) toggle.checked = isMaintenance;
             
-            // Bannière Annonce Globale
             const banner = document.getElementById('global-announcement');
             if(data.announcement && data.announcement.trim() !== "") { banner.innerText = data.announcement; banner.style.display = 'block'; } 
             else { banner.style.display = 'none'; }
@@ -139,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fab-quick-add')?.addEventListener('click', () => { document.getElementById('modal-quick-add').style.display = 'flex'; });
     document.getElementById('btn-close-quick-add')?.addEventListener('click', () => { document.getElementById('modal-quick-add').style.display = 'none'; });
     
-    // NOUVEAU : Fonction Confettis Gamification
     function fireConfetti() {
         const colors = ['#4A90E2', '#50E3C2', '#FDCB6E', '#FF6B6B', '#A29BFE'];
         for(let i=0; i<50; i++) {
@@ -159,7 +156,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- CALENDRIER LOGIQUE ---
-    function checkReminders() { /* Reste identique */ }
+    function checkReminders() {
+        if(reminderPopupShown) return;
+        const todayTime = new Date().setHours(0,0,0,0); let upcoming = [];
+        eventsData.forEach(ev => {
+            if (ev.reminder > 0) {
+                const evTime = new Date(ev.dateStart || ev.date).setHours(0,0,0,0); 
+                const diffDays = (evTime - todayTime) / (1000 * 3600 * 24);
+                if (diffDays >= 0 && diffDays <= ev.reminder) upcoming.push({ ...ev, diffDays });
+            }
+        });
+        if (upcoming.length > 0) {
+            const list = document.getElementById('reminder-list'); list.innerHTML = '';
+            upcoming.forEach(ev => {
+                const dayText = ev.diffDays === 0 ? "<b>Aujourd'hui</b>" : `dans ${ev.diffDays} jour(s)`;
+                list.innerHTML += `<li style="margin-bottom:8px; padding:12px; background:rgba(0,0,0,0.03); border-radius:8px; border-left: 4px solid ${ev.important ? '#e74c3c' : 'var(--primary)'};"><strong style="font-size:1.1em;">${ev.title}</strong><br><span style="font-size:0.9em; color:#666;">Prévu ${dayText} (${new Date(ev.dateStart || ev.date).toLocaleDateString('fr-FR')})</span></li>`;
+            });
+            document.getElementById('reminder-popup').style.display = 'flex'; reminderPopupShown = true;
+        }
+    }
+
     document.getElementById('cal-prev')?.addEventListener('click', () => { calMonth--; if(calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); });
     document.getElementById('cal-next')?.addEventListener('click', () => { calMonth++; if(calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); });
     document.getElementById('cal-show-expenses')?.addEventListener('change', renderCalendar);
@@ -200,11 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.reset(); alert("Événement ajouté au calendrier !"); 
     });
 
-    // --- RENDU UI DASHBOARD ---
+    // --- BOUTONS DASHBOARD BARRE D'ACTIONS ---
     document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => { showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'block' : 'none'; e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)'; updateUI(); });
     document.getElementById('btn-toggle-annual')?.addEventListener('click', (e) => { showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none'; e.target.style.background = showAnnual ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showAnnual ? '#fff' : 'var(--text)'; updateUI(); });
     document.getElementById('btn-toggle-admin')?.addEventListener('click', () => { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; });
 
+    // --- RENDU UI DASHBOARD ---
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
         list.innerHTML = ""; const m = parseInt(document.getElementById('filter-month').value); const y = parseInt(document.getElementById('filter-year').value);
@@ -278,12 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         subsData.sort((a,b) => a.day - b.day).forEach(sub => {
             total += sub.amount;
             const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(0,0,0,0.02); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;";
-            li.innerHTML = `
-                <div style="flex:1;"><strong>${sub.name}</strong><br><small style="color:#666;">Le ${sub.day} du mois - ${sub.category}</small></div>
-                <div style="font-weight:bold; color:#e74c3c; margin-right:15px;">-${sub.amount.toFixed(2)}€</div>
-                <button class="pay-sub btn-small" data-name="${sub.name}" data-amount="${sub.amount}" data-cat="${sub.category}" style="background:#2ecc71; color:white; padding:5px 10px; border:none; margin-right:5px !important;">Payer</button>
-                <button class="delete-sub btn-small" data-id="${sub.id}" style="background:#e74c3c; color:white; padding:5px 10px; border:none;">✕</button>
-            `;
+            li.innerHTML = `<div style="flex:1;"><strong>${sub.name}</strong><br><small style="color:#666;">Le ${sub.day} du mois - ${sub.category}</small></div><div style="font-weight:bold; color:#e74c3c; margin-right:15px;">-${sub.amount.toFixed(2)}€</div><button class="pay-sub btn-small" data-name="${sub.name}" data-amount="${sub.amount}" data-cat="${sub.category}" style="background:#2ecc71; color:white; padding:5px 10px; border:none; margin-right:5px !important;">Payer</button><button class="delete-sub btn-small" data-id="${sub.id}" style="background:#e74c3c; color:white; padding:5px 10px; border:none;">✕</button>`;
             list.appendChild(li);
         });
         totLabel.innerText = total.toFixed(2) + " €";
@@ -297,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => { expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); updateUI(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), s => { customCategories = []; s.forEach(doc => customCategories.push({ id: doc.id, ...doc.data() })); renderCategories(); updateUI(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), s => { goals = []; s.forEach(doc => goals.push({ id: doc.id, ...doc.data() })); renderGoals(); }));
-        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); }));
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); checkReminders(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), s => { subsData = []; s.forEach(doc => subsData.push({ id: doc.id, ...doc.data() })); renderSubs(); }));
     }
 
@@ -305,9 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAdminData() {
         if(auth.currentUser.uid !== ADMIN_UID) return; 
         
-        const now = Date.now();
-        const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
-        let activeCount = 0;
+        const now = Date.now(); const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000); let activeCount = 0;
 
         const usersSnap = await getDocs(collection(db, "users"));
         document.getElementById('admin-tot-users').innerText = usersSnap.size;
@@ -328,7 +338,6 @@ document.addEventListener('DOMContentLoaded', () => {
             bList.innerHTML += `<tr><td style="font-weight:bold; color:var(--primary);">${b.code}</td><td><small>${b.owner}</small></td><td><button class="delete-budget-data btn-small" data-bid="${docSnap.id}" style="background:#e74c3c; color:white; padding:5px;">Détruire</button></td></tr>`;
         });
 
-        // Charger Feedbacks
         const fbSnap = await getDocs(collection(db, "feedbacks"));
         const fList = document.getElementById('admin-feedback-list'); fList.innerHTML = '';
         fbSnap.forEach(docSnap => {
@@ -337,14 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Bouton Mode Fantôme (Admin)
     document.getElementById('btn-ghost-mode')?.addEventListener('click', () => {
         const target = document.getElementById('admin-ghost-id').value;
         if(target && target.trim() !== "") {
             unsubscribers.forEach(u => u()); unsubscribers = []; isDataLoaded = false;
             CURRENT_BUDGET_ID = target.trim(); loadBudgetData();
             alert("Mode fantôme activé ! Vous voyez le budget : " + CURRENT_BUDGET_ID);
-            document.getElementById('nav-dashboard').click(); // Redirection tableau de bord
+            document.getElementById('nav-dashboard').click();
         }
     });
 
@@ -365,31 +373,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return alert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { alert("Code introuvable !"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- FORMULAIRES DE DÉPENSES (NORMAL ET QUICK ADD) ---
+    // --- FORMULAIRES DE DÉPENSES ---
     async function saveExpense(type, amount, cat, desc) {
         if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
-            const gid = document.getElementById('goal-selector').value; const targetGoal = goals.find(g => g.id === gid); 
+            const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
             if(targetGoal) {
                 await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
-                // 🎉 CONFETTIS SI OBJECTIF ATTEINT !
                 if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
             }
         } 
         await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), { date: new Date().toLocaleDateString('fr-FR'), timestamp: Date.now(), desc: desc, amount: amount, payerId: auth.currentUser.uid, category: cat, type: type }); 
     }
 
-    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { 
-        e.preventDefault(); 
-        await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value);
-        e.target.reset(); 
-    });
-
-    document.getElementById('quick-expense-form')?.addEventListener('submit', async (e) => { 
-        e.preventDefault(); 
-        await saveExpense(document.querySelector('input[name="quick-trans-type"]:checked').value, parseFloat(document.getElementById('quick-amount').value), document.getElementById('quick-category').value, document.getElementById('quick-desc').value);
-        e.target.reset(); document.getElementById('modal-quick-add').style.display = 'none';
-    });
-
+    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value); e.target.reset(); });
+    document.getElementById('quick-expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="quick-trans-type"]:checked').value, parseFloat(document.getElementById('quick-amount').value), document.getElementById('quick-category').value, document.getElementById('quick-desc').value); e.target.reset(); document.getElementById('modal-quick-add').style.display = 'none'; });
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
@@ -402,13 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(e.target.classList.contains('delete-sub')) { if(confirm("Supprimer cet abonnement ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-feedback')) { if(confirm("Effacer ce message ?")) { await deleteDoc(doc(db, "feedbacks", e.target.dataset.id)); loadAdminData(); } }
         
-        // Clic sur "Payer" un abonnement
         if(e.target.classList.contains('pay-sub')) { 
             const amt = parseFloat(e.target.dataset.amount); const nom = e.target.dataset.name; const cat = e.target.dataset.cat;
-            if(confirm(`Ajouter ${amt}€ dans les dépenses pour : ${nom} ?`)) {
-                await saveExpense('expense', amt, cat, nom);
-                alert("Abonnement payé et ajouté aux dépenses !");
-            }
+            if(confirm(`Ajouter ${amt}€ dans les dépenses pour : ${nom} ?`)) { await saveExpense('expense', amt, cat, nom); alert("Abonnement payé et ajouté aux dépenses !"); }
         }
 
         if(e.target.classList.contains('delete-user-data')) { if(confirm("Purger les données de cet utilisateur ?")) { await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null }); alert("Utilisateur purgé."); loadAdminData(); } }

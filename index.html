@@ -106,11 +106,9 @@
         .badge-perso { background: #4A90E2; } .badge-pro { background: #9b59b6; }
         .badge-important { border-left: 4px solid #f1c40f; font-weight: bold; }
 
-        /* NOUVEAU : BOUTON SAISIE RAPIDE (FAB) */
         .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; font-size: 2em; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 1500; border: none; transition: 0.2s; }
         .fab-btn:hover { transform: scale(1.1); }
         
-        /* BANNIÈRE D'ANNONCE */
         #global-announcement { display:none; background:#e74c3c; color:white; padding:12px; text-align:center; font-weight:bold; width:100%; border-radius:8px; margin-bottom:20px; animation: slideDown 0.5s ease; }
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
@@ -148,6 +146,18 @@
             <input type="number" id="quick-amount" placeholder="Combien ? (€)" step="0.01" required>
             <select id="quick-category" required></select>
             <button type="submit">Valider</button>
+        </form>
+    </div>
+</div>
+
+<div id="modal-adjust-balance" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.7);">
+    <div class="auth-box" style="position:relative;">
+        <button id="btn-close-adjust" style="position:absolute; top:-10px; right:10px; background:none; color:var(--text); font-size:1.5em; width:auto; border:none; margin:0; padding:0;">✕</button>
+        <h2 style="color: var(--primary); margin-top:0;">⚖️ Ajuster le solde</h2>
+        <p style="font-size:0.9em; color:#666;">Entrez le solde <b>exact</b> affiché sur votre application bancaire. Nous ferons la correction mathématique automatiquement.</p>
+        <form id="adjust-balance-form">
+            <input type="number" id="real-balance-input" placeholder="Solde réel en €" step="0.01" required style="text-align:center; font-size:1.2em; font-weight:bold;">
+            <button type="submit" style="background:var(--secondary); color:#333;">Corriger le solde</button>
         </form>
     </div>
 </div>
@@ -421,7 +431,13 @@
         <div class="grid-stats">
             <div class="card">
                 <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
-                <div class="card-content"><span id="solde-actuel" class="balance">0.00 €</span><p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p></div>
+                <div class="card-content">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span id="solde-actuel" class="balance">0.00 €</span>
+                        <button id="btn-open-adjust" style="background:none; border:none; cursor:pointer; font-size:1.2em; color:#888; padding:0; width:auto; margin:0;" title="Ajuster le solde au montant réel">✏️</button>
+                    </div>
+                    <p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p>
+                </div>
             </div>
             <div class="card">
                 <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
