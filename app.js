@@ -1,5 +1,4 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-// Correction : Retour au getFirestore classique, 100% stable
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
@@ -15,16 +14,46 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
-// 🟢 INITIALISATION STABLE (Sans forcer le cache capricieux)
-const db = getFirestore(app); 
+const db = getFirestore(app);
 const auth = getAuth(app);
 
 // 👑 2. REMPLACEZ CECI PAR VOTRE UID FIREBASE ADMIN
 const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2"; 
 
-// --- Le reste du code commence ici ---
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- 🛠️ SYSTÈME DE POP-UP PERSONNALISÉ (Remplacement de alert et confirm) ---
+    function customAlert(message, title = "Information") {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('custom-dialog-overlay');
+            document.getElementById('custom-dialog-title').innerText = title;
+            document.getElementById('custom-dialog-msg').innerHTML = message;
+            const btnContainer = document.getElementById('custom-dialog-btns');
+            btnContainer.innerHTML = '<button id="btn-dialog-ok" style="width:auto; padding:10px 25px;">OK</button>';
+            overlay.style.display = 'flex';
+            
+            document.getElementById('btn-dialog-ok').onclick = () => { overlay.style.display = 'none'; resolve(); };
+        });
+    }
+
+    function customConfirm(message, title = "Confirmation") {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('custom-dialog-overlay');
+            document.getElementById('custom-dialog-title').innerText = title;
+            document.getElementById('custom-dialog-msg').innerHTML = message;
+            const btnContainer = document.getElementById('custom-dialog-btns');
+            btnContainer.innerHTML = `
+                <button id="btn-dialog-cancel" class="btn-small" style="background:var(--card-bg); color:var(--text);">Annuler</button>
+                <button id="btn-dialog-confirm" style="width:auto; padding:10px 25px; background:#e74c3c;">Confirmer</button>
+            `;
+            overlay.style.display = 'flex';
+            
+            document.getElementById('btn-dialog-cancel').onclick = () => { overlay.style.display = 'none'; resolve(false); };
+            document.getElementById('btn-dialog-confirm').onclick = () => { overlay.style.display = 'none'; resolve(true); };
+        });
+    }
+
+
     // --- ÉLÉMENTS UI ---
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
@@ -53,8 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let calMonth = new Date().getMonth(); let calYear = new Date().getFullYear();
     let reminderPopupShown = false;
     let isMaintenance = false; let currentUserObj = null;
-    let editingExpenseId = null; // Utilisé pour modifier une dépense
-    let deferredPrompt; // Pour l'installation PWA
+    let editingExpenseId = null; 
+    let deferredPrompt; 
 
     // --- 🌍 GESTION RÉSEAU & INSTALLATION PWA ---
     window.addEventListener('online', () => document.getElementById('status-indicator').innerText = "● Connecté");
@@ -99,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(auth.currentUser.uid !== ADMIN_UID) return;
         const msg = document.getElementById('admin-announcement-input').value;
         await setDoc(doc(db, "settings", "system"), { announcement: msg }, { merge: true });
-        alert(msg === "" ? "Annonce retirée." : "Annonce publiée à tous les utilisateurs !");
+        customAlert(msg === "" ? "Annonce retirée." : "Annonce publiée à tous les utilisateurs !", "Annonce");
     });
 
     document.getElementById('btn-admin-bypass')?.addEventListener('click', () => { screenMaintenance.style.display = 'none'; screenAuth.style.display = 'flex'; });
@@ -139,9 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => {
         const email = document.getElementById('auth-email').value;
-        if(!email) return alert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.");
-        try { await sendPasswordResetEmail(auth, email); alert("Un email de réinitialisation vous a été envoyé !"); } 
-        catch(e) { alert("Erreur : Adresse email introuvable ou invalide."); }
+        if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !");
+        try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } 
+        catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); }
     });
 
     document.getElementById('login-form')?.addEventListener('submit', async (e) => {
@@ -172,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('feedback-form')?.addEventListener('submit', async(e) => {
         e.preventDefault();
         await addDoc(collection(db, "feedbacks"), { text: document.getElementById('feedback-text').value, user: auth.currentUser.email, date: Date.now() });
-        document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; alert("Merci pour votre retour !");
+        document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; customAlert("Merci pour votre retour !", "Message envoyé");
     });
 
     document.getElementById('fab-quick-add')?.addEventListener('click', () => { document.getElementById('modal-quick-add').style.display = 'flex'; });
@@ -222,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
         monthDisplay.innerText = `${monthNames[calMonth]} ${calYear}`; grid.innerHTML = '';
         let firstDay = new Date(calYear, calMonth, 1).getDay(); if(firstDay === 0) firstDay = 7; const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
         for (let i = 1; i < firstDay; i++) { grid.innerHTML += `<div class="calendar-day empty"></div>`; }
         const showExpenses = document.getElementById('cal-show-expenses').checked; const todayStr = new Date().toLocaleDateString('fr-FR');
 
@@ -229,6 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateStrFR = `${String(day).padStart(2, '0')}/${String(calMonth+1).padStart(2, '0')}/${calYear}`;
             const dateStrISO = `${calYear}-${String(calMonth+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             let cellHTML = `<div class="calendar-day ${dateStrFR === todayStr ? 'today' : ''}"><div class="day-num">${day}</div>`;
+            
             const currentCellTime = new Date(dateStrISO).getTime();
             eventsData.forEach(ev => { 
                 const evStart = new Date(ev.dateStart || ev.date).getTime(); const evEnd = new Date(ev.dateEnd || ev.date).getTime();
@@ -243,27 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     document.getElementById('ev-date-start')?.addEventListener('change', (e) => { const endInput = document.getElementById('ev-date-end'); if (!endInput.value || new Date(endInput.value) < new Date(e.target.value)) { endInput.value = e.target.value; } });
+    
     document.getElementById('event-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); const dStart = document.getElementById('ev-date-start').value; const dEnd = document.getElementById('ev-date-end').value;
-        if(new Date(dEnd) < new Date(dStart)) return alert("Erreur : La date de fin ne peut pas être avant la date de début.");
+        if(new Date(dEnd) < new Date(dStart)) return customAlert("La date de fin ne peut pas être avant la date de début.", "Erreur de saisie");
         await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), { dateStart: dStart, timeStart: document.getElementById('ev-time-start').value || "", dateEnd: dEnd, timeEnd: document.getElementById('ev-time-end').value || "", title: document.getElementById('ev-title').value, type: document.getElementById('ev-type').value, important: document.getElementById('ev-important').checked, reminder: parseInt(document.getElementById('ev-reminder').value) }); 
-        e.target.reset(); alert("Événement ajouté au calendrier !"); 
-    });
-
-    // --- EXPORT CSV (NOUVEAU) ---
-    document.getElementById('export-btn')?.addEventListener('click', () => {
-        if(expenses.length === 0) return alert("Aucune donnée à exporter.");
-        let csvContent = "data:text/csv;charset=utf-8,Date,Type,Description,Catégorie,Payé par,Montant\n";
-        expenses.forEach(e => {
-            const typeStr = e.type === 'income' ? 'Revenu' : 'Dépense';
-            const payerName = members.find(m => m.id === e.payerId)?.name || "Inconnu";
-            csvContent += `"${e.date}","${typeStr}","${e.desc}","${e.category}","${payerName}","${e.amount}"\n`;
-        });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `budget_duo_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`);
-        document.body.appendChild(link); link.click(); link.remove();
+        e.target.reset(); customAlert("Événement ajouté au calendrier !", "Succès"); 
     });
 
     // --- BOUTONS DASHBOARD BARRE D'ACTIONS ---
@@ -271,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-toggle-annual')?.addEventListener('click', (e) => { showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none'; e.target.style.background = showAnnual ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showAnnual ? '#fff' : 'var(--text)'; updateUI(); });
     document.getElementById('btn-toggle-admin')?.addEventListener('click', () => { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; });
 
-    // --- RENDU UI DASHBOARD (AVEC BOUTON EDIT) ---
+    // --- RENDU UI DASHBOARD ---
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
         list.innerHTML = ""; const m = parseInt(document.getElementById('filter-month').value); const y = parseInt(document.getElementById('filter-year').value);
@@ -281,14 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isInc = e.type === 'income'; let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
             if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
             if(isInc) { rev += e.amount; memberStats[currentPayerId].rev += e.amount; } else { dep += e.amount; memberStats[currentPayerId].dep += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
-            const tr = document.createElement('tr'); 
-            // AJOUT DU BOUTON ÉDITER (✏️)
-            tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small>${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'#2ecc71':'#e74c3c'}; font-weight:bold;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
-            <td style="white-space:nowrap;">
-                <button class="edit-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;">✏️</button>
-                <button class="delete-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;">🗑️</button>
-            </td>`; 
-            list.appendChild(tr);
+            const tr = document.createElement('tr'); tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small>${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'#2ecc71':'#e74c3c'}; font-weight:bold;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td><td style="white-space:nowrap;"><button class="edit-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;">✏️</button><button class="delete-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;">🗑️</button></td>`; list.appendChild(tr);
         });
 
         document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €'; document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
@@ -313,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAnnualChart() { const ctx = document.getElementById('annualChart')?.getContext('2d'); if(!ctx) return; const monthlyData = new Array(12).fill(0).map(() => ({ inc: 0, exp: 0 })); expenses.filter(e => new Date(e.timestamp).getFullYear() === parseInt(document.getElementById('filter-year').value)).forEach(e => { const m = new Date(e.timestamp).getMonth(); if(e.type === 'income') monthlyData[m].inc += e.amount; else monthlyData[m].exp += e.amount; }); if(myAnnualChart) myAnnualChart.destroy(); myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: '#2ecc71' }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: '#e74c3c' }] }, options: { responsive: true, maintainAspectRatio: false } }); }
 
     // --- FRAIS FIXES ---
-    document.getElementById('sub-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), { name: document.getElementById('sub-name').value, amount: parseFloat(document.getElementById('sub-amount').value), category: document.getElementById('sub-category').value, day: parseInt(document.getElementById('sub-day').value) }); e.target.reset(); alert("Frais fixe enregistré !"); });
+    document.getElementById('sub-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), { name: document.getElementById('sub-name').value, amount: parseFloat(document.getElementById('sub-amount').value), category: document.getElementById('sub-category').value, day: parseInt(document.getElementById('sub-day').value) }); e.target.reset(); customAlert("Frais fixe enregistré !"); });
     function renderSubs() { const list = document.getElementById('subs-list'); const totLabel = document.getElementById('total-subs-amount'); if(!list || !totLabel) return; list.innerHTML = ""; let total = 0; subsData.sort((a,b) => a.day - b.day).forEach(sub => { total += sub.amount; const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(0,0,0,0.02); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;"; li.innerHTML = `<div style="flex:1;"><strong>${sub.name}</strong><br><small style="color:#666;">Le ${sub.day} du mois - ${sub.category}</small></div><div style="font-weight:bold; color:#e74c3c; margin-right:15px;">-${sub.amount.toFixed(2)}€</div><button class="pay-sub btn-small" data-name="${sub.name}" data-amount="${sub.amount}" data-cat="${sub.category}" style="background:#2ecc71; color:white; padding:5px 10px; border:none; margin-right:5px !important;">Payer</button><button class="delete-sub btn-small" data-id="${sub.id}" style="background:#e74c3c; color:white; padding:5px 10px; border:none;">✕</button>`; list.appendChild(li); }); totLabel.innerText = total.toFixed(2) + " €"; }
 
     // --- CHARGEMENT DATA FIREBASE ---
@@ -341,16 +350,16 @@ document.addEventListener('DOMContentLoaded', () => {
         fbSnap.forEach(docSnap => { const f = docSnap.data(); const d = new Date(f.date).toLocaleDateString(); fList.innerHTML += `<tr><td>${d}</td><td>${f.user}</td><td>${f.text}</td><td><button class="delete-feedback btn-small" data-id="${docSnap.id}" style="padding:5px;">🗑️</button></td></tr>`; });
     }
 
-    document.getElementById('btn-ghost-mode')?.addEventListener('click', () => { const target = document.getElementById('admin-ghost-id').value; if(target && target.trim() !== "") { unsubscribers.forEach(u => u()); unsubscribers = []; isDataLoaded = false; CURRENT_BUDGET_ID = target.trim(); loadBudgetData(); alert("Mode fantôme activé ! Vous voyez le budget : " + CURRENT_BUDGET_ID); document.getElementById('nav-dashboard').click(); } });
+    document.getElementById('btn-ghost-mode')?.addEventListener('click', async () => { const target = document.getElementById('admin-ghost-id').value; if(target && target.trim() !== "") { unsubscribers.forEach(u => u()); unsubscribers = []; isDataLoaded = false; CURRENT_BUDGET_ID = target.trim(); loadBudgetData(); await customAlert("Mode fantôme activé ! Vous voyez le budget : " + CURRENT_BUDGET_ID); document.getElementById('nav-dashboard').click(); } });
     document.getElementById('search-admin-users')?.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); document.querySelectorAll('#admin-user-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; }); });
     document.getElementById('search-admin-budgets')?.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); document.querySelectorAll('#admin-budget-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; }); });
 
     // --- SETUP & PROFIL ---
-    document.getElementById('btn-create-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return alert("Veuillez entrer votre prénom."); const code = Math.random().toString(36).substring(2, 8).toUpperCase(); const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid }); await setDoc(doc(db, "budgets", ref.id, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: ref.id }, { merge: true }); window.location.reload(); });
-    document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return alert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { alert("Code introuvable !"); } });
+    document.getElementById('btn-create-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const code = Math.random().toString(36).substring(2, 8).toUpperCase(); const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid }); await setDoc(doc(db, "budgets", ref.id, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: ref.id }, { merge: true }); window.location.reload(); });
+    document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable !", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- FORMULAIRES DE DÉPENSES (AVEC LOGIQUE D'ÉDITION) ---
+    // --- FORMULAIRES DE DÉPENSES ---
     async function saveExpense(type, amount, cat, desc) {
         if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
             const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
@@ -359,21 +368,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
             }
         } 
-        
-        // ✏️ SI ON EST EN TRAIN DE MODIFIER UNE OPÉRATION EXISTANTE
         if(editingExpenseId) {
             await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), { desc: desc, amount: amount, category: cat, type: type, payerId: document.getElementById('payer').value });
-            editingExpenseId = null; // On vide l'ID d'édition
-            
-            // On remet le bouton à son état normal
-            const btnSubmit = document.getElementById('btn-submit-expense');
-            if(btnSubmit) {
-                btnSubmit.innerText = "Enregistrer l'opération";
-                btnSubmit.style.background = "var(--primary)";
-            }
+            editingExpenseId = null; 
+            const btnSubmit = document.getElementById('btn-submit-expense'); if(btnSubmit) { btnSubmit.innerText = "Enregistrer l'opération"; btnSubmit.style.background = "var(--primary)"; }
             document.getElementById('form-expense-title').innerText = "➕ Nouvelle Opération";
         } else {
-            // NOUVELLE OPÉRATION CLASSIQUE
             await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), { date: new Date().toLocaleDateString('fr-FR'), timestamp: Date.now(), desc: desc, amount: amount, payerId: document.getElementById('payer').value, category: cat, type: type }); 
         }
     }
@@ -383,50 +383,43 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
-    // --- GESTION DES CLICS MULTIPLES (RÉDUCTION, SUPPRESSION ET ÉDITION) ---
+    // --- GESTION DES CLICS MULTIPLES AVEC CUSTOM CONFIRM ---
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
         
-        // ✏️ Clic sur Éditer une dépense
         if(e.target.classList.contains('edit-exp')) {
-            const expId = e.target.dataset.id;
-            const expToEdit = expenses.find(x => x.id === expId);
+            const expId = e.target.dataset.id; const expToEdit = expenses.find(x => x.id === expId);
             if(expToEdit) {
-                editingExpenseId = expId; // On garde l'ID en mémoire
-                
-                // Remplissage du formulaire
-                document.getElementById('desc').value = expToEdit.desc;
-                document.getElementById('amount').value = expToEdit.amount;
-                document.getElementById('category').value = expToEdit.category;
-                document.getElementById('payer').value = expToEdit.payerId;
-                document.querySelector(`input[name="trans-type"][value="${expToEdit.type}"]`).checked = true;
-                
-                // Modification visuelle du bouton pour que l'utilisateur comprenne
-                const btnSubmit = document.getElementById('btn-submit-expense');
-                if(btnSubmit) {
-                    btnSubmit.innerText = "💾 Enregistrer la modification";
-                    btnSubmit.style.background = "#f39c12"; // Devient Orange
-                }
-                document.getElementById('form-expense-title').innerText = "✏️ Modifier l'opération";
-                
-                // Scroll automatique vers le formulaire
-                document.getElementById('expense-form').scrollIntoView({behavior: "smooth"});
+                editingExpenseId = expId; document.getElementById('desc').value = expToEdit.desc; document.getElementById('amount').value = expToEdit.amount; document.getElementById('category').value = expToEdit.category; document.getElementById('payer').value = expToEdit.payerId; document.querySelector(`input[name="trans-type"][value="${expToEdit.type}"]`).checked = true;
+                const btnSubmit = document.getElementById('btn-submit-expense'); if(btnSubmit) { btnSubmit.innerText = "💾 Enregistrer la modification"; btnSubmit.style.background = "#f39c12"; }
+                document.getElementById('form-expense-title').innerText = "✏️ Modifier l'opération"; document.getElementById('expense-form').scrollIntoView({behavior: "smooth"});
             }
         }
 
-        if(e.target.classList.contains('delete-exp')) { if(confirm("Supprimer l'opération ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id)); }
-        if(e.target.classList.contains('delete-cat')) { if(confirm("Supprimer la catégorie ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id)); }
-        if(e.target.classList.contains('delete-ev')) { if(confirm("Supprimer cet événement du calendrier ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/events`, e.target.dataset.id)); }
-        if(e.target.classList.contains('delete-sub')) { if(confirm("Supprimer cet abonnement ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`, e.target.dataset.id)); }
-        if(e.target.classList.contains('delete-feedback')) { if(confirm("Effacer ce message ?")) { await deleteDoc(doc(db, "feedbacks", e.target.dataset.id)); loadAdminData(); } }
+        if(e.target.classList.contains('delete-exp')) { if(await customConfirm("Voulez-vous vraiment supprimer cette opération ?", "Supprimer ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id)); }
+        if(e.target.classList.contains('delete-cat')) { if(await customConfirm("Voulez-vous vraiment supprimer cette catégorie ?", "Supprimer ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id)); }
+        if(e.target.classList.contains('delete-ev')) { if(await customConfirm("Voulez-vous vraiment supprimer cet événement du calendrier ?", "Supprimer ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/events`, e.target.dataset.id)); }
+        if(e.target.classList.contains('delete-sub')) { if(await customConfirm("Voulez-vous vraiment supprimer cet abonnement ?", "Supprimer ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`, e.target.dataset.id)); }
+        if(e.target.classList.contains('delete-feedback')) { if(await customConfirm("Voulez-vous effacer ce message ?", "Effacer ?")) { await deleteDoc(doc(db, "feedbacks", e.target.dataset.id)); loadAdminData(); } }
         
         if(e.target.classList.contains('pay-sub')) { 
             const amt = parseFloat(e.target.dataset.amount); const nom = e.target.dataset.name; const cat = e.target.dataset.cat;
-            if(confirm(`Ajouter ${amt}€ dans les dépenses pour : ${nom} ?`)) { await saveExpense('expense', amt, cat, nom); alert("Abonnement payé et ajouté aux dépenses !"); }
+            if(await customConfirm(`Ajouter ${amt}€ dans les dépenses pour : ${nom} ?`, "Payer l'abonnement")) { await saveExpense('expense', amt, cat, nom); customAlert("Abonnement payé et ajouté aux dépenses !"); }
         }
 
-        if(e.target.classList.contains('delete-user-data')) { if(confirm("Purger les données de cet utilisateur ?")) { await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null }); alert("Utilisateur purgé."); loadAdminData(); } }
-        if(e.target.classList.contains('delete-budget-data')) { if(confirm("Détruire ce foyer ?")) { await deleteDoc(doc(db, "budgets", e.target.dataset.bid)); alert("Foyer détruit."); loadAdminData(); } }
+        if(e.target.classList.contains('delete-user-data')) { if(await customConfirm("Purger les données de cet utilisateur ?", "Danger")) { await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null }); customAlert("Utilisateur purgé."); loadAdminData(); } }
+        if(e.target.classList.contains('delete-budget-data')) { if(await customConfirm("Détruire ce foyer cassera l'application pour ses membres. Continuer ?", "DANGER EXTRÊME")) { await deleteDoc(doc(db, "budgets", e.target.dataset.bid)); customAlert("Foyer détruit."); loadAdminData(); } }
+    });
+
+    // EXPORT CSV
+    document.getElementById('export-btn')?.addEventListener('click', () => {
+        if(expenses.length === 0) return customAlert("Aucune donnée à exporter.", "Oups !");
+        let csvContent = "data:text/csv;charset=utf-8,Date,Type,Description,Catégorie,Payé par,Montant\n";
+        expenses.forEach(e => {
+            const typeStr = e.type === 'income' ? 'Revenu' : 'Dépense'; const payerName = members.find(m => m.id === e.payerId)?.name || "Inconnu";
+            csvContent += `"${e.date}","${typeStr}","${e.desc}","${e.category}","${payerName}","${e.amount}"\n`;
+        });
+        const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `budget_duo_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`); document.body.appendChild(link); link.click(); link.remove();
     });
 
     const fM = document.getElementById('filter-month'), fY = document.getElementById('filter-year');
