@@ -20,7 +20,7 @@
         body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
         body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
 
-        /* --- DÉCORATIONS THÈMES PANDAS (Fond fixé à l'écran) --- */
+        /* --- DÉCORATIONS THÈMES PANDAS --- */
         body::before { 
             content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
             z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; 
@@ -70,7 +70,7 @@
 
         .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; }
         
-        /* Réduction des cartes (pour les 4 blocs principaux) */
+        /* Réduction des cartes */
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .card-header h3 { margin: 0 !important; }
         .toggle-card-btn { background: transparent !important; color: var(--text) !important; border: none !important; box-shadow: none !important; font-size: 1.3em !important; padding: 10px !important; margin: -10px !important; width: auto !important; min-width: auto !important; cursor: pointer; opacity: 0.6; transition: 0.2s; outline: none; }
@@ -84,11 +84,19 @@
         button:hover { opacity: 0.9; }
         .btn-small { width: auto !important; margin: 0 !important; padding: 10px 15px !important; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
 
+        /* ⬇️ NOUVEAU : CUSTOM RADIO BUTTONS (DÉPENSE/REVENU) ⬇️ */
+        .transaction-type-toggle { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }
+        .radio-label { flex: 1; cursor: pointer; }
+        .radio-label input { display: none; } /* Cache le vrai bouton radio moche */
+        .radio-btn { display: block; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; transition: 0.2s; background: var(--bg); border: 2px solid var(--border); color: var(--text); }
+        .radio-label input[value="expense"]:checked + .radio-btn { background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c; }
+        .radio-label input[value="income"]:checked + .radio-btn { background: rgba(46, 204, 113, 0.1); border-color: #2ecc71; color: #2ecc71; }
+        /* ⬆️ FIN NOUVEAU STYLE ⬆️ */
+
         .progress-bar { width: 100%; background: var(--border); border-radius: 10px; height: 12px; overflow: hidden; margin-top: 10px; }
         .progress-fill { height: 100%; transition: 0.6s ease; }
         .green { background: #2ECC71; } .orange { background: #f39c12; } .red { background: #E74C3C; }
 
-        /* Tableau Mobile Friendly avec défilement tactile fluide */
         .table-container { padding: 0; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
@@ -130,10 +138,9 @@
 
 <div id="reminder-popup" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.8);">
     <div class="auth-box" style="background: var(--card-bg); color: var(--text); border: 3px solid var(--primary);">
-        <h2 style="color: var(--primary); margin-top:0;">🔔 Rappels en cours</h2>
-        <p style="font-size:0.9em; color:#666;">Ne les oubliez pas !</p>
+        <h2 style="color: var(--primary); margin-top:0;">🔔 Rappels</h2>
         <ul id="reminder-list" style="list-style:none; padding:0; text-align:left; max-height: 200px; overflow-y: auto; margin-bottom:20px;"></ul>
-        <button id="btn-close-reminder" style="background: var(--secondary); color:#333; margin-top:0;">Compris, fermer</button>
+        <button id="btn-close-reminder" style="background: var(--secondary); color:#333; margin-top:0;">Fermer</button>
     </div>
 </div>
 
@@ -147,19 +154,18 @@
             <button type="submit" id="auth-submit-btn">Se connecter</button>
         </form>
         <p id="auth-error" style="color:#E74C3C; display:none; font-size:0.85em; margin-top:15px; font-weight:bold;"></p>
-        <span id="auth-toggle-mode" style="font-size:0.85em; color:var(--primary); cursor:pointer; display:block; margin-top:20px; text-decoration: underline;">Pas encore de compte ? S'inscrire</span>
+        <span id="auth-toggle-mode" style="font-size:0.85em; color:var(--primary); cursor:pointer; display:block; margin-top:20px; text-decoration: underline;">S'inscrire</span>
     </div>
 </div>
 
 <div id="screen-setup" class="fullscreen-overlay" style="display:none;">
     <div class="auth-box">
         <h2>🏠 Configuration</h2>
-        <p style="font-size:0.9em; color:#666; margin-bottom: 25px;">Rejoignez un budget existant ou créez le vôtre.</p>
         <input type="text" id="setup-pseudo" placeholder="Votre Prénom (Ex: Thomas)" required style="margin-bottom: 25px; text-align:center; font-weight:bold; border: 2px solid var(--primary);">
         <input type="text" id="join-code" placeholder="CODE PARTENAIRE" style="text-align:center; text-transform:uppercase; font-weight: bold; letter-spacing: 2px;">
         <button id="btn-join-budget" style="background:var(--secondary); color:#333;">Rejoindre le budget</button>
         <div style="margin: 25px 0; color:#aaa; font-size:0.8em;">— OU —</div>
-        <button id="btn-create-budget">Créer un nouveau foyer</button>
+        <button id="btn-create-budget">Créer un foyer</button>
     </div>
 </div>
 
@@ -210,14 +216,14 @@
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
                     <input type="date" id="ev-date" required>
-                    <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste)" required>
+                    <input type="text" id="ev-title" placeholder="Titre" required>
                     <select id="ev-type" required><option value="perso">👤 Personnel</option><option value="pro">💼 Professionnel</option></select>
                     <div style="margin:15px 0; background:rgba(231, 76, 60, 0.1); padding:10px; border-radius:8px;">
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:bold; color:#e74c3c;"><input type="checkbox" id="ev-important"> ⚠️ Événement Important</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:bold; color:#e74c3c;"><input type="checkbox" id="ev-important"> ⚠️ Important</label>
                     </div>
                     <label style="font-size:0.85em; font-weight:bold;">🔔 M'alerter via Pop-up :</label>
-                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun rappel</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
-                    <button type="submit">Ajouter au calendrier</button>
+                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
+                    <button type="submit">Ajouter</button>
                 </form>
             </div>
         </div>
@@ -227,17 +233,15 @@
         <h2 style="color:var(--primary); margin-top:0; margin-bottom: 20px;">👤 Mon Profil & Foyer</h2>
         <div class="card" style="margin-bottom: 25px;">
             <h3 style="margin-top:0;">Inviter un partenaire</h3>
-            <p style="font-size:0.9em; margin-bottom:5px;">Donnez ce code à la personne avec qui vous partagez ce budget :</p>
             <h2 id="display-invite-code" style="text-align:center; color:var(--primary); letter-spacing:8px; margin:15px 0; background:var(--bg); padding:15px; border-radius:8px; border: 2px dashed var(--secondary); word-break: break-all;">---</h2>
         </div>
         <div class="card">
-            <h3 style="margin-top:0;">Mes informations</h3>
-            <label style="font-weight: bold; font-size: 0.9em;">Mon Prénom dans l'application</label>
+            <h3 style="margin-top:0;">Mon Prénom</h3>
             <div style="display:flex; gap:10px; align-items: center;">
                 <input type="text" id="admin-pseudo" placeholder="Ex: Thomas" style="flex:1;">
                 <button id="btn-update-pseudo" class="btn-small" style="background:var(--secondary); color:#333;">Enregistrer</button>
             </div>
-            <p id="profile-success" style="color:#2ecc71; font-size:0.85em; display:none; margin:10px 0 0 0; font-weight: bold;">✓ Profil mis à jour !</p>
+            <p id="profile-success" style="color:#2ecc71; font-size:0.85em; display:none; margin:10px 0 0 0; font-weight: bold;">✓ Mis à jour !</p>
         </div>
     </div>
 
@@ -259,6 +263,7 @@
         <div class="layout-split" style="margin-top:25px;">
             <div class="card" style="overflow-x:auto;">
                 <h3 style="margin-top:0;">Base Utilisateurs</h3>
+                <input type="text" id="search-admin-users" placeholder="🔍 Rechercher (Email, ID...)" style="margin-top:0; margin-bottom:15px;">
                 <table style="min-width: 400px; font-size:0.85em;">
                     <thead style="background:rgba(0,0,0,0.05);"><tr><th>Email</th><th>ID User</th><th>ID Foyer</th><th>Actions</th></tr></thead>
                     <tbody id="admin-user-list"></tbody>
@@ -266,6 +271,7 @@
             </div>
             <div class="card" style="overflow-x:auto;">
                 <h3 style="margin-top:0;">Gestion des Foyers</h3>
+                <input type="text" id="search-admin-budgets" placeholder="🔍 Rechercher (Code, ID...)" style="margin-top:0; margin-bottom:15px;">
                 <table style="min-width: 400px; font-size:0.85em;">
                     <thead style="background:rgba(0,0,0,0.05);"><tr><th>Code</th><th>Créateur (ID)</th><th>Actions</th></tr></thead>
                     <tbody id="admin-budget-list"></tbody>
@@ -288,12 +294,12 @@
             <div class="layout-split">
                 <div>
                     <h4 style="margin-top:0;">🎯 Objectifs d'épargne</h4>
-                    <form id="goal-form"><input type="text" id="goal-name" placeholder="Ex: Voyage" required><input type="number" id="goal-target" placeholder="Cible €" required><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter l'objectif</button></form>
+                    <form id="goal-form"><input type="text" id="goal-name" placeholder="Ex: Voyage" required><input type="number" id="goal-target" placeholder="Cible €" required><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button></form>
                     <ul id="goal-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
                 <div>
                     <h4 style="margin-top:0;">📂 Catégories de budget</h4>
-                    <form id="category-form"><div style="display:flex; gap:8px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;"><input type="text" id="new-cat-name" placeholder="Nom" required></div><input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)"><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter la catégorie</button></form>
+                    <form id="category-form"><div style="display:flex; gap:8px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;"><input type="text" id="new-cat-name" placeholder="Nom" required></div><input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)"><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button></form>
                     <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
                 </div>
             </div>
@@ -311,15 +317,15 @@
 
         <div class="grid-stats">
             <div class="card">
-                <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
+                <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
                 <div class="card-content"><span id="solde-actuel" class="balance">0.00 €</span><p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p></div>
             </div>
             <div class="card">
-                <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
+                <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
                 <div class="card-content"><span id="total-depenses" class="balance" style="color:#e74c3c">0.00 €</span></div>
             </div>
             <div class="card" style="text-align:center;">
-                <div class="card-header"><h3 style="text-align:left;">📈 Répartition</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
+                <div class="card-header"><h3 style="text-align:left;">📈 Répartition</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
                 <div class="card-content"><canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas><div style="margin-top:12px; font-size:0.8em; color:#666;"><input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)</div><div id="proportional-container" style="display:none; text-align:left;"></div></div>
             </div>
         </div>
@@ -327,12 +333,22 @@
         <div id="goals-container" class="grid-stats"></div>
 
         <div class="layout-split" style="margin-top:25px;">
-            
             <div class="card">
-                <div class="card-header"><h3>➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire/Agrandir">➖</button></div>
+                <div class="card-header"><h3>➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
                 <div class="card-content">
                     <form id="expense-form">
-                        <div style="display:flex; gap:15px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px; flex-wrap: wrap;"><label style="flex:1;"><input type="radio" name="trans-type" value="expense" checked> Dépense</label><label style="flex:1;"><input type="radio" name="trans-type" value="income"> Revenu</label></div>
+                        
+                        <div class="transaction-type-toggle">
+                            <label class="radio-label">
+                                <input type="radio" name="trans-type" value="expense" checked>
+                                <span class="radio-btn">📉 Dépense</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="trans-type" value="income">
+                                <span class="radio-btn">📈 Revenu</span>
+                            </label>
+                        </div>
+
                         <input type="text" id="desc" placeholder="Description (Ex: Courses)" required><input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
                         <select id="payer" required></select><select id="category" required></select>
                         <div id="goal-selector-group" style="display:none;"><select id="goal-selector"></select></div>
@@ -342,7 +358,7 @@
             </div>
             
             <div style="width: 100%;">
-                <div style="display:flex; gap:10px; margin-bottom:12px;"><input type="text" id="search-bar" placeholder="🔍 Rechercher..." style="margin-top:0;"><button id="export-btn" class="btn-small" style="background:var(--secondary); color:#333; margin-top:0 !important;">📥 CSV</button></div>
+                <div style="display:flex; gap:10px; margin-bottom:12px;"><input type="text" id="search-bar" placeholder="🔍 Rechercher une opération..." style="margin-top:0;"><button id="export-btn" class="btn-small" style="background:var(--secondary); color:#333; margin-top:0 !important;">📥 CSV</button></div>
                 <div class="table-container">
                     <table>
                         <thead style="background:rgba(0,0,0,0.02);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Prix</th><th>Action</th></tr></thead>
