@@ -27,7 +27,7 @@
 
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); transition: 0.3s; display: flex; min-height: 100vh; }
         
-        .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: transform 0.3s ease; z-index: 1001; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; top: 0; bottom: 0; transition: transform 0.3s ease; z-index: 1001; overflow-y: auto; }
         .sidebar.collapsed { transform: translateX(-260px); }
         .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: margin-left 0.3s ease; width: 100%; max-width: 100%; }
         .main-content.expanded { margin-left: 0; }
@@ -106,18 +106,18 @@
         .badge-perso { background: #4A90E2; } .badge-pro { background: #9b59b6; }
         .badge-important { border-left: 4px solid #f1c40f; font-weight: bold; }
 
-        .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; font-size: 2em; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 1500; border: none; transition: 0.2s; }
+        /* BOUTON FLOTTANT (FAB) Z-INDEX AJUSTÉ */
+        .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; font-size: 2em; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 900; border: none; transition: 0.2s; }
         .fab-btn:hover { transform: scale(1.1); }
         
         #global-announcement { display:none; background:#e74c3c; color:white; padding:12px; text-align:center; font-weight:bold; width:100%; border-radius:8px; margin-bottom:20px; animation: slideDown 0.5s ease; }
         
-        /* ✨ NOUVEAU : ANIMATIONS DE TRANSITION */
         .view-section { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* 📱 NOUVEAU : BARRE DE NAVIGATION MOBILE (BOTTOM BAR) */
-        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 2000; justify-content: space-around; padding: 10px 0; border-top: 1px solid var(--border); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        /* 📱 BOTTOM BAR Z-INDEX AJUSTÉ */
+        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 800; justify-content: space-around; padding: 10px 0; border-top: 1px solid var(--border); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
         .bottom-nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text); text-decoration: none; font-size: 0.75em; gap: 4px; cursor: pointer; opacity: 0.5; transition: 0.2s; }
         .bottom-nav-item.active { opacity: 1; color: var(--primary); font-weight: bold; }
         .bottom-nav-item span { font-size: 1.5em; }
@@ -125,16 +125,17 @@
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
-            .main-content { margin-left: 0 !important; padding: 15px; width: 100vw; max-width: 100vw; overflow-x: hidden; padding-bottom: 90px; } /* Espace pour la bottom bar */
-            .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: stretch; }
+            /* ⬇️ LA CORRECTION EST ICI : padding-bottom à 160px pour dégager l'espace sous le bouton + ⬇️ */
+            .main-content { margin-left: 0 !important; padding: 15px; width: 100vw; max-width: 100vw; overflow-x: hidden; padding-bottom: 160px; } 
+            .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: stretch; } 
             .layout-split { display: flex; flex-direction: column; gap: 15px; width: 100%; }
             .card { padding: 15px; width: 100%; box-sizing: border-box; }
             .action-bar { flex-direction: column; align-items: stretch; }
             .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 5px !important; }
             .action-bar-spacer { display: none; }
             .calendar-day { min-height: 60px; font-size: 0.7em; }
-            .fab-btn { bottom: 85px; right: 20px; width: 55px; height: 55px; } /* Remonte au dessus de la barre */
-            .bottom-nav { display: flex; } /* Active la barre mobile */
+            .fab-btn { bottom: 85px; right: 20px; width: 55px; height: 55px; } 
+            .bottom-nav { display: flex; } 
         }
     </style>
 </head>
@@ -259,7 +260,7 @@
     </div>
 
     <div id="global-announcement"></div>
-
+    
     <div id="view-subscriptions" class="view-section" style="display:none;">
         <h2 style="color:var(--primary); margin-top:0;">🔁 Abonnements & Frais Fixes</h2>
         <div class="layout-split">
@@ -326,6 +327,7 @@
                             <span>⚠️ Événement Important</span>
                         </label>
                     </div>
+
                     <label style="font-size:0.85em; font-weight:bold;">🔔 M'alerter via Pop-up :</label>
                     <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
                     <button type="submit">Ajouter au calendrier</button>
@@ -471,9 +473,7 @@
                             <label class="radio-label"><input type="radio" name="trans-type" value="expense" checked><span class="radio-btn">📉 Dépense</span></label>
                             <label class="radio-label"><input type="radio" name="trans-type" value="income"><span class="radio-btn">📈 Revenu</span></label>
                         </div>
-                        
                         <input type="date" id="expense-date" required>
-
                         <input type="text" id="desc" placeholder="Description (Ex: Courses)" required><input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
                         <select id="payer" required></select><select id="category" required></select>
                         <div id="goal-selector-group" style="display:none;"><select id="goal-selector"></select></div>
