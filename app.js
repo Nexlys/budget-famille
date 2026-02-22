@@ -48,12 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialisation des dates (Aujourd'hui par défaut)
     const todayISO = new Date().toISOString().split('T')[0];
     if(document.getElementById('expense-date')) document.getElementById('expense-date').value = todayISO;
     if(document.getElementById('quick-date')) document.getElementById('quick-date').value = todayISO;
 
-    // --- ÉLÉMENTS UI ---
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
     const toggleBtn = document.getElementById('toggle-sidebar');
@@ -69,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
     const viewSubs = document.getElementById('view-subscriptions');
+    const navItems = document.querySelectorAll('.nav-item');
 
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
@@ -82,24 +81,89 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingExpenseId = null; 
     let deferredPrompt; 
 
+    // --- 🐼 TAMAGOTCHI PANDA GÉANT ---
+    let pandaLove = 50;
+    let pandaHunger = 50;
+    let pandaWriteTimeout = null;
+    let pandaPetAccumulator = 0;
+    let pandaLastX = null;
+
+    function checkPandaVisibility() {
+        const theme = localStorage.getItem('budgetTheme') || 'light';
+        const pandaBtn = document.getElementById('panda-trigger-btn');
+        if (theme === 'panda-geant' && CURRENT_BUDGET_ID) {
+            pandaBtn.style.display = 'block';
+        } else {
+            pandaBtn.style.display = 'none';
+        }
+    }
+
+    document.getElementById('panda-trigger-btn')?.addEventListener('click', () => {
+        document.getElementById('modal-panda-game').style.display = 'flex';
+    });
+    document.getElementById('btn-close-panda')?.addEventListener('click', () => {
+        document.getElementById('modal-panda-game').style.display = 'none';
+    });
+
+    function updatePandaUI() {
+        document.getElementById('panda-love-text').innerText = pandaLove + '%';
+        document.getElementById('panda-love-fill').style.width = pandaLove + '%';
+        document.getElementById('panda-hunger-text').innerText = pandaHunger + '%';
+        document.getElementById('panda-hunger-fill').style.width = pandaHunger + '%';
+    }
+
+    function spawnHeart(x, y) {
+        const heart = document.createElement('div');
+        heart.innerText = '❤️';
+        heart.style.position = 'fixed';
+        heart.style.left = (x - 10) + 'px';
+        heart.style.top = (y - 10) + 'px';
+        heart.style.fontSize = '24px';
+        heart.style.pointerEvents = 'none';
+        heart.style.zIndex = '4000';
+        document.body.appendChild(heart);
+        const anim = heart.animate([{ transform: 'translateY(0) scale(1)', opacity: 1 }, { transform: 'translateY(-100px) scale(1.5)', opacity: 0 }], { duration: 1000, easing: 'ease-out' });
+        anim.onfinish = () => heart.remove();
+    }
+
+    function handlePandaPet(clientX, clientY) {
+        if(pandaLastX !== null) {
+            pandaPetAccumulator += Math.abs(clientX - pandaLastX);
+            if(pandaPetAccumulator > 80) { 
+                pandaPetAccumulator = 0;
+                spawnHeart(clientX, clientY);
+                if(pandaLove < 100) {
+                    pandaLove++;
+                    updatePandaUI();
+                    clearTimeout(pandaWriteTimeout);
+                    pandaWriteTimeout = setTimeout(() => { updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: pandaLove, lastUpdate: Date.now() }); }, 1000);
+                }
+            }
+        }
+        pandaLastX = clientX;
+    }
+
+    const interactivePanda = document.getElementById('interactive-panda');
+    interactivePanda?.addEventListener('mousemove', (e) => handlePandaPet(e.clientX, e.clientY));
+    interactivePanda?.addEventListener('touchmove', (e) => { e.preventDefault(); handlePandaPet(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+    interactivePanda?.addEventListener('mouseleave', () => pandaLastX = null);
+    interactivePanda?.addEventListener('touchend', () => pandaLastX = null);
+
+    document.getElementById('btn-feed-panda')?.addEventListener('click', () => {
+        if(pandaHunger >= 100) return customAlert("Il n'a plus faim pour le moment, il a le ventre plein ! 🐼");
+        pandaHunger = Math.min(100, pandaHunger + 15);
+        updatePandaUI();
+        updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { hunger: pandaHunger, lastUpdate: Date.now() });
+        customAlert("Miam miam ! Merci pour le bambou 🎋");
+    });
+
+
     // --- 🌍 GESTION RÉSEAU & INSTALLATION PWA ---
     window.addEventListener('online', () => document.getElementById('status-indicator').innerText = "● Connecté");
     window.addEventListener('offline', () => { document.getElementById('status-indicator').innerText = "● Hors-ligne"; document.getElementById('status-indicator').style.color = "#e74c3c"; });
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault(); deferredPrompt = e;
-        const installCard = document.getElementById('install-app-card');
-        if(installCard) installCard.style.display = 'block';
-    });
-    
-    document.getElementById('btn-install-pwa')?.addEventListener('click', async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') document.getElementById('install-app-card').style.display = 'none';
-            deferredPrompt = null;
-        }
-    });
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const installCard = document.getElementById('install-app-card'); if(installCard) installCard.style.display = 'block'; });
+    document.getElementById('btn-install-pwa')?.addEventListener('click', async () => { if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') document.getElementById('install-app-card').style.display = 'none'; deferredPrompt = null; } });
 
     onSnapshot(doc(db, "settings", "system"), (d) => {
         if(d.exists()) {
@@ -107,8 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isMaintenance = data.maintenance === true;
             const toggle = document.getElementById('admin-maintenance-toggle'); if(toggle) toggle.checked = isMaintenance;
             const banner = document.getElementById('global-announcement');
-            if(data.announcement && data.announcement.trim() !== "") { banner.innerText = data.announcement; banner.style.display = 'block'; } 
-            else { banner.style.display = 'none'; }
+            if(data.announcement && data.announcement.trim() !== "") { banner.innerText = data.announcement; banner.style.display = 'block'; } else { banner.style.display = 'none'; }
             renderAppState(); 
         }
     });
@@ -117,25 +180,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-admin-announce')?.addEventListener('click', async () => { if(auth.currentUser.uid !== ADMIN_UID) return; const msg = document.getElementById('admin-announcement-input').value; await setDoc(doc(db, "settings", "system"), { announcement: msg }, { merge: true }); customAlert(msg === "" ? "Annonce retirée." : "Annonce publiée à tous les utilisateurs !", "Annonce"); });
     document.getElementById('btn-admin-bypass')?.addEventListener('click', () => { screenMaintenance.style.display = 'none'; screenAuth.style.display = 'flex'; });
 
-    // --- 👤 AUTHENTIFICATION ---
     onAuthStateChanged(auth, async (user) => { currentUserObj = user; if (user) { await updateDoc(doc(db, "users", user.uid), { lastLogin: Date.now() }).catch(e=>{}); } renderAppState(); });
 
     async function renderAppState() {
-        if (isMaintenance && (!currentUserObj || currentUserObj.uid !== ADMIN_UID)) {
-            screenMaintenance.style.display = 'flex'; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; screenApp.style.display = 'none';
-            if (currentUserObj) await signOut(auth); return; 
-        }
+        if (isMaintenance && (!currentUserObj || currentUserObj.uid !== ADMIN_UID)) { screenMaintenance.style.display = 'flex'; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; screenApp.style.display = 'none'; if (currentUserObj) await signOut(auth); return; }
         screenMaintenance.style.display = 'none';
         if (currentUserObj) {
             if(currentUserObj.uid === ADMIN_UID) document.getElementById('nav-admin').style.display = 'flex';
             if (!isDataLoaded) { 
                 const userDoc = await getDoc(doc(db, "users", currentUserObj.uid));
-                if (userDoc.exists() && userDoc.data().budgetId) { CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; loadBudgetData(); } 
+                if (userDoc.exists() && userDoc.data().budgetId) { CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; loadBudgetData(); checkPandaVisibility(); } 
                 else { screenAuth.style.display = 'none'; screenApp.style.display = 'none'; screenSetup.style.display = 'flex'; }
             }
         } else {
             screenAuth.style.display = 'flex'; screenApp.style.display = 'none'; screenSetup.style.display = 'none'; 
-            unsubscribers.forEach(u => u()); unsubscribers = []; CURRENT_BUDGET_ID = null; isDataLoaded = false;
+            unsubscribers.forEach(u => u()); unsubscribers = []; CURRENT_BUDGET_ID = null; isDataLoaded = false; checkPandaVisibility();
         }
     }
 
@@ -147,11 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function switchView(viewElement, navId, bnavId) {
         viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none';
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
-        
         viewElement.style.display = 'block';
         if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
         if(document.getElementById(bnavId)) document.getElementById(bnavId).classList.add('active');
-        
         window.scrollTo(0,0);
         if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); if (mobileOverlay) mobileOverlay.classList.remove('active'); }
     }
@@ -159,14 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleBtn?.addEventListener('click', () => { if (window.innerWidth <= 850) { sidebar.classList.toggle('mobile-open'); if (mobileOverlay) mobileOverlay.classList.toggle('active'); } else { sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded'); } });
     mobileOverlay?.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); });
 
-    // Boutons Sidebar
     document.getElementById('nav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-quick-add').style.display='flex'; });
     document.getElementById('nav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-quick-add').style.display='none';});
     document.getElementById('nav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
     document.getElementById('nav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
     document.getElementById('nav-admin')?.addEventListener('click', () => { switchView(viewAdmin, 'nav-admin', null); document.getElementById('fab-quick-add').style.display='none'; loadAdminData(); });
 
-    // Boutons Barre Mobile
     document.getElementById('bnav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-quick-add').style.display='flex'; });
     document.getElementById('bnav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-quick-add').style.display='none';});
     document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
@@ -177,21 +232,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-close-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'none'; });
     document.getElementById('feedback-form')?.addEventListener('submit', async(e) => { e.preventDefault(); await addDoc(collection(db, "feedbacks"), { text: document.getElementById('feedback-text').value, user: auth.currentUser.email, date: Date.now() }); document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; customAlert("Merci pour votre retour !", "Message envoyé"); });
 
-    document.getElementById('fab-quick-add')?.addEventListener('click', () => { 
-        document.getElementById('quick-date').value = new Date().toISOString().split('T')[0]; // Reset date to today
-        document.getElementById('modal-quick-add').style.display = 'flex'; 
-    });
+    document.getElementById('fab-quick-add')?.addEventListener('click', () => { document.getElementById('quick-date').value = new Date().toISOString().split('T')[0]; document.getElementById('modal-quick-add').style.display = 'flex'; });
     document.getElementById('btn-close-quick-add')?.addEventListener('click', () => { document.getElementById('modal-quick-add').style.display = 'none'; });
     
     function fireConfetti() {
         const colors = ['#4A90E2', '#50E3C2', '#FDCB6E', '#FF6B6B', '#A29BFE'];
         for(let i=0; i<50; i++) {
-            const conf = document.createElement('div');
-            conf.style.position = 'fixed'; conf.style.zIndex = '9999'; conf.style.width = '10px'; conf.style.height = '10px';
-            conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-            conf.style.left = Math.random() * 100 + 'vw'; conf.style.top = '-10px';
-            conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
-            document.body.appendChild(conf);
+            const conf = document.createElement('div'); conf.style.position = 'fixed'; conf.style.zIndex = '9999'; conf.style.width = '10px'; conf.style.height = '10px'; conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]; conf.style.left = Math.random() * 100 + 'vw'; conf.style.top = '-10px'; conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '0'; document.body.appendChild(conf);
             const anim = conf.animate([{ transform: `translate3d(0,0,0) rotate(0deg)`, opacity: 1 }, { transform: `translate3d(${Math.random()*200 - 100}px, 100vh, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }], { duration: Math.random() * 2000 + 2000, easing: 'cubic-bezier(.37,0,.63,1)' });
             anim.onfinish = () => conf.remove();
         }
@@ -247,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.reset(); customAlert("Événement ajouté au calendrier !", "Succès"); 
     });
 
-    // --- BOUTONS DASHBOARD BARRE D'ACTIONS ---
+    // --- BOUTONS DASHBOARD ---
     document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => { showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'block' : 'none'; e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)'; updateUI(); });
     document.getElementById('btn-toggle-annual')?.addEventListener('click', (e) => { showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none'; e.target.style.background = showAnnual ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showAnnual ? '#fff' : 'var(--text)'; updateUI(); });
     document.getElementById('btn-toggle-admin')?.addEventListener('click', () => { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; });
@@ -260,17 +307,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const filteredExpenses = expenses.filter(e => { return new Date(e.timestamp).getMonth() === m && new Date(e.timestamp).getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch)); });
 
-        // 📭 ÉTAT VIDE DU TABLEAU
         if(filteredExpenses.length === 0) {
             list.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text); opacity:0.6; font-size:1.1em;">📭 Aucune opération pour cette période. Quel calme !</td></tr>`;
         } else {
-            // REMPLISSAGE NORMAL
             filteredExpenses.forEach(e => {
                 const isInc = e.type === 'income'; let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
                 if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
                 if(isInc) { rev += e.amount; memberStats[currentPayerId].rev += e.amount; } else { dep += e.amount; memberStats[currentPayerId].dep += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
                 const tr = document.createElement('tr'); 
-                // BOUTON DUPLIQUER 📋 AJOUTÉ
                 tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small>${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'#2ecc71':'#e74c3c'}; font-weight:bold;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
                 <td style="white-space:nowrap;">
                     <button class="duplicate-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;" title="Dupliquer">📋</button>
@@ -304,12 +348,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FRAIS FIXES ---
     document.getElementById('sub-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), { name: document.getElementById('sub-name').value, amount: parseFloat(document.getElementById('sub-amount').value), category: document.getElementById('sub-category').value, day: parseInt(document.getElementById('sub-day').value) }); e.target.reset(); customAlert("Frais fixe enregistré !", "Succès"); });
-    
     function renderSubs() { 
         const list = document.getElementById('subs-list'); const totLabel = document.getElementById('total-subs-amount'); if(!list || !totLabel) return; 
         list.innerHTML = ""; let total = 0; 
         if(subsData.length === 0) { list.innerHTML = '<li style="text-align:center; padding:15px; color:#888; font-style:italic;">📭 Aucun frais fixe configuré.</li>'; totLabel.innerText = "0.00 €"; return; }
-        
         subsData.sort((a,b) => a.day - b.day).forEach(sub => { 
             total += sub.amount; const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(0,0,0,0.02); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;"; 
             li.innerHTML = `<div style="flex:1;"><strong>${sub.name}</strong><br><small style="color:#666;">Le ${sub.day} du mois - ${sub.category}</small></div><div style="font-weight:bold; color:#e74c3c; margin-right:15px;">-${sub.amount.toFixed(2)}€</div><button class="pay-sub btn-small" data-name="${sub.name}" data-amount="${sub.amount}" data-cat="${sub.category}" style="background:#2ecc71; color:white; padding:5px 10px; border:none; margin-right:5px !important;">Payer</button><button class="delete-sub btn-small" data-id="${sub.id}" style="background:#e74c3c; color:white; padding:5px 10px; border:none;">✕</button>`; 
@@ -328,6 +370,29 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), s => { goals = []; s.forEach(doc => goals.push({ id: doc.id, ...doc.data() })); renderGoals(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); checkReminders(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), s => { subsData = []; s.forEach(doc => subsData.push({ id: doc.id, ...doc.data() })); renderSubs(); }));
+        
+        // --- CHARGEMENT DU TAMAGOTCHI ---
+        unsubscribers.push(onSnapshot(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), (d) => {
+            if(d.exists()) {
+                const p = d.data();
+                const now = Date.now();
+                const daysPassed = (now - p.lastUpdate) / (1000 * 60 * 60 * 24);
+                
+                // Si ça fait plus d'1 jour, on baisse les stats (10 points perdus par jour d'absence)
+                if(daysPassed >= 1) {
+                    const decay = Math.floor(daysPassed) * 10;
+                    pandaLove = Math.max(0, p.love - decay);
+                    pandaHunger = Math.max(0, p.hunger - decay);
+                    updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: pandaLove, hunger: pandaHunger, lastUpdate: now });
+                } else {
+                    pandaLove = p.love; pandaHunger = p.hunger;
+                    updatePandaUI();
+                }
+            } else {
+                // Création initiale du Panda pour ce foyer
+                setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: 50, hunger: 50, lastUpdate: Date.now() });
+            }
+        }));
     }
 
     // --- LOGIQUE ADMINISTRATION ---
@@ -352,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable !", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- FORMULAIRES DE DÉPENSES (AVEC LOGIQUE DE DATE) ---
+    // --- FORMULAIRES DE DÉPENSES ---
     async function saveExpense(type, amount, cat, desc, dateVal) {
         if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
             const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
@@ -362,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } 
         
-        // Convertit YYYY-MM-DD en Timestamp (Midi pour éviter les bugs de fuseau horaire) et en format FR
         const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
         const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
 
@@ -381,11 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
-    // --- GESTION DES CLICS MULTIPLES (ÉDITION & DUPLICATION) ---
+    // --- GESTION DES CLICS MULTIPLES ---
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
         
-        // ✏️ ÉDITER
         if(e.target.classList.contains('edit-exp')) {
             const expId = e.target.dataset.id; const expToEdit = expenses.find(x => x.id === expId);
             if(expToEdit) {
@@ -396,15 +459,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // 📋 DUPLIQUER (Ouvre la saisie rapide)
         if(e.target.classList.contains('duplicate-exp')) {
             const expId = e.target.dataset.id; const expToDup = expenses.find(x => x.id === expId);
             if(expToDup) {
-                document.getElementById('quick-desc').value = expToDup.desc;
-                document.getElementById('quick-amount').value = expToDup.amount;
-                document.getElementById('quick-category').value = expToDup.category;
-                document.querySelector(`input[name="quick-trans-type"][value="${expToDup.type}"]`).checked = true;
-                document.getElementById('quick-date').value = new Date().toISOString().split('T')[0]; // Par défaut aujourd'hui
+                document.getElementById('quick-desc').value = expToDup.desc; document.getElementById('quick-amount').value = expToDup.amount; document.getElementById('quick-category').value = expToDup.category; document.querySelector(`input[name="quick-trans-type"][value="${expToDup.type}"]`).checked = true;
+                document.getElementById('quick-date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('modal-quick-add').style.display = 'flex';
             }
         }
@@ -424,14 +483,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if(e.target.classList.contains('delete-budget-data')) { if(await customConfirm("Détruire ce foyer cassera l'application pour ses membres. Continuer ?", "DANGER EXTRÊME")) { await deleteDoc(doc(db, "budgets", e.target.dataset.bid)); customAlert("Foyer détruit."); loadAdminData(); } }
     });
 
-    // EXPORT CSV
     document.getElementById('export-btn')?.addEventListener('click', () => {
         if(expenses.length === 0) return customAlert("Aucune donnée à exporter.", "Oups !");
         let csvContent = "data:text/csv;charset=utf-8,Date,Type,Description,Catégorie,Payé par,Montant\n";
-        expenses.forEach(e => {
-            const typeStr = e.type === 'income' ? 'Revenu' : 'Dépense'; const payerName = members.find(m => m.id === e.payerId)?.name || "Inconnu";
-            csvContent += `"${e.date}","${typeStr}","${e.desc}","${e.category}","${payerName}","${e.amount}"\n`;
-        });
+        expenses.forEach(e => { const typeStr = e.type === 'income' ? 'Revenu' : 'Dépense'; const payerName = members.find(m => m.id === e.payerId)?.name || "Inconnu"; csvContent += `"${e.date}","${typeStr}","${e.desc}","${e.category}","${payerName}","${e.amount}"\n`; });
         const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `budget_duo_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`); document.body.appendChild(link); link.click(); link.remove();
     });
 
@@ -439,7 +494,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if(fM && fY) { ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'].forEach((m, i) => fM.appendChild(new Option(m, i))); const dNow = new Date(); for(let i = dNow.getFullYear()-1; i <= dNow.getFullYear()+1; i++) fY.appendChild(new Option(i, i)); fM.value = dNow.getMonth(); fY.value = dNow.getFullYear(); fM.addEventListener('change', updateUI); fY.addEventListener('change', updateUI); }
     document.getElementById('toggle-proportional')?.addEventListener('change', (e) => { document.getElementById('expenseChart').style.display = e.target.checked ? 'none' : 'block'; document.getElementById('proportional-container').style.display = e.target.checked ? 'block' : 'none'; });
     document.getElementById('auth-toggle-mode')?.addEventListener('click', () => { const t = document.getElementById('auth-title'); const b = document.getElementById('auth-submit-btn'); const l = document.getElementById('auth-toggle-mode'); const isLog = t.innerText === "Connexion"; t.innerText = isLog ? "Inscription" : "Connexion"; b.innerText = isLog ? "Créer mon compte" : "Se connecter"; l.innerText = isLog ? "Déjà un compte ? Connexion" : "Pas encore de compte ? S'inscrire"; });
-    document.getElementById('theme-selector')?.addEventListener('change', (e) => { document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`; localStorage.setItem('budgetTheme', e.target.value); });
+    
+    document.getElementById('theme-selector')?.addEventListener('change', (e) => { 
+        document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`; 
+        localStorage.setItem('budgetTheme', e.target.value); 
+        checkPandaVisibility(); // Vérifie s'il faut afficher la bulle du Panda
+    });
+    
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
     document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
+    
+    // Application du thème au chargement initial
+    const savedTheme = localStorage.getItem('budgetTheme') || 'light';
+    if(savedTheme !== 'light') { document.body.className = `theme-${savedTheme}`; }
+    const tSel = document.getElementById('theme-selector'); if(tSel) tSel.value = savedTheme;
 });
