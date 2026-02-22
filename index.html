@@ -6,165 +6,203 @@
     <title>Budget Duo</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
+        /* ==========================================================================
+           🛡️ FONDATIONS & DESIGN COCOONING
+           ========================================================================== */
         *, *::before, *::after { box-sizing: border-box; }
         html, body { max-width: 100%; overflow-x: hidden; position: relative; width: 100vw; margin: 0; padding: 0; }
 
-        :root { --primary: #4A90E2; --secondary: #50E3C2; --bg: #F4F7F6; --text: #333; --card-bg: #FFF; --border: #ddd; --sidebar-bg: #2C3E50; --sidebar-text: #ecf0f1; }
-        body.theme-dark { --primary: #6ab0ff; --secondary: #50E3C2; --bg: #121212; --text: #f0f0f0; --card-bg: #1e1e1e; --border: #333; --sidebar-bg: #000; --sidebar-text: #fff; }
-        body.theme-cosy { --primary: #D4A373; --secondary: #A9AF7E; --bg: #FAEDCD; --text: #5E503F; --card-bg: #FEFAE0; --border: #E9EDC9; --sidebar-bg: #5E503F; --sidebar-text: #FEFAE0; }
-        body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
-        body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
+        /* --- THEME PAR DÉFAUT : COSY & WARM --- */
+        :root { 
+            --primary: #D4A373;   /* Caramel doux */
+            --secondary: #CCD5AE; /* Vert sauge pastel */
+            --bg: #FAF6F0;        /* Fond lin très doux */
+            --text: #5C5346;      /* Texte brun chaud (pas de noir agressif) */
+            --card-bg: #FFFFFF;   /* Cartes blanches */
+            --border: #EAE4D9;    /* Bordures subtiles */
+            --sidebar-bg: #F4ECE1;/* Menu latéral crème */
+            --sidebar-text: #5C5346;
+            --danger: #E07A5F;    /* Rouge doux terracota */
+            --success: #81B29A;   /* Vert doux de validation */
+        }
+        
+        /* Autres thèmes adaptés pour garder la douceur */
+        body.theme-dark { --primary: #A3B18A; --secondary: #DAD7CD; --bg: #2C2A29; --text: #EAE4D9; --card-bg: #3A3635; --border: #4A4543; --sidebar-bg: #242221; --sidebar-text: #EAE4D9; }
+        body.theme-panda-geant { --primary: #52796F; --secondary: #CAD2C5; --bg: #E8F5E9; --text: #2F3E46; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #354F52; --sidebar-text: #FFF; }
+        body.theme-panda-roux { --primary: #E07A5F; --secondary: #F4F1DE; --bg: #FDF8F5; --text: #3D405B; --card-bg: #FFF; --border: #F2E8CF; --sidebar-bg: #81B29A; --sidebar-text: #FFF; }
 
-        body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; background-size: cover; background-position: center; pointer-events: none; }
+        /* --- DÉCORATIONS THEMES IMAGES --- */
+        body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; opacity: 0; transition: opacity 0.8s ease-in-out; background-size: cover; background-position: center; pointer-events: none; }
         .sidebar-footer { position: relative; }
-        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
+        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.5s ease-in-out; }
 
-        body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
+        body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.7), rgba(242,244,242,0.7)), url('panda-geant.jpg'); }
         body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
-        body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
+        body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.7), rgba(250,243,232,0.7)), url('fond-roux.jpg'); }
         body.theme-panda-roux .sidebar-footer::before { opacity: 1; background-image: url('icone-roux.png'); }
 
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); transition: 0.3s; display: flex; min-height: 100vh; }
+        body { font-family: 'Nunito', sans-serif; background-color: var(--bg); color: var(--text); transition: background-color 0.5s, color 0.5s; display: flex; min-height: 100vh; line-height: 1.5; }
         
-        .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; top: 0; bottom: 0; transition: transform 0.3s ease; z-index: 1001; overflow-y: auto; }
-        .sidebar.collapsed { transform: translateX(-260px); }
-        .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: margin-left 0.3s ease; width: 100%; max-width: 100%; }
+        /* --- SIDEBAR --- */
+        .sidebar { width: 270px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 25px 20px; position: fixed; top: 0; bottom: 0; transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1001; overflow-y: auto; border-right: 1px solid var(--border); }
+        .sidebar.collapsed { transform: translateX(-270px); }
+        .main-content { flex: 1; margin-left: 270px; padding: 30px; transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); width: 100%; max-width: 100%; }
         .main-content.expanded { margin-left: 0; }
-        .sidebar h2 { font-size: 1.4em; margin-bottom: 30px; text-align: center; color: var(--secondary); white-space: nowrap; }
+        .sidebar h2 { font-size: 1.6em; font-weight: 800; margin-bottom: 40px; text-align: center; color: var(--primary); white-space: nowrap; letter-spacing: 1px; }
         .nav-menu { list-style: none; padding: 0; flex: 1; margin: 0; }
-        .nav-item { padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; font-weight: 500; }
-        .nav-item:hover { background: rgba(255,255,255,0.1); }
-        .nav-item.active { background: var(--primary); color: white; }
-        .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+        .nav-item { padding: 14px 18px; border-radius: 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.3s ease; font-weight: 700; color: var(--sidebar-text); opacity: 0.7; }
+        .nav-item:hover { opacity: 1; background: rgba(0,0,0,0.03); transform: translateX(5px); }
+        .nav-item.active { background: var(--card-bg); color: var(--primary); opacity: 1; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+        .sidebar-footer { border-top: 2px dashed var(--border); padding-top: 25px; }
 
-        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; opacity: 0; transition: opacity 0.3s ease; }
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(3px); z-index: 1000; opacity: 0; transition: opacity 0.4s ease; }
         .mobile-overlay.active { display: block; opacity: 1; }
 
-        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap; width: 100%; }
-        .toggle-sidebar-btn { background: var(--sidebar-bg); color: white; border: none; width: 42px !important; height: 42px !important; border-radius: 8px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 0 !important; padding: 0 !important; }
-        .toggle-sidebar-btn:hover { background: var(--primary); }
-        #theme-selector { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; outline: none; }
-        .action-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; align-items: center; width: 100%; }
+        /* --- HEADER --- */
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; gap: 15px; flex-wrap: wrap; width: 100%; }
+        .toggle-sidebar-btn { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); width: 48px !important; height: 48px !important; border-radius: 14px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.02); margin: 0 !important; padding: 0 !important; }
+        .toggle-sidebar-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        #theme-selector { padding: 10px 18px; border-radius: 20px; font-size: 0.9em; font-weight: 600; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; outline: none; font-family: inherit; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        
+        .action-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; align-items: center; width: 100%; }
         .action-bar-spacer { flex-grow: 1; }
 
+        /* --- POPUPS & AUTH --- */
         .fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
-        .auth-box { background: var(--card-bg); padding: 35px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
+        #custom-dialog-overlay { background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); }
+        .auth-box { background: var(--card-bg); padding: 40px; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); width: 100%; max-width: 420px; text-align: center; border: 1px solid var(--border); }
 
-        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; align-items: start; }
-        .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; align-items: start; width: 100%; }
+        /* --- GRILLES ET CARTES (COCOONING) --- */
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; margin-bottom: 35px; width: 100%; align-items: start; }
+        .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; align-items: start; width: 100%; }
         .grid-stats > div, .layout-split > div { min-width: 0; }
 
-        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .card-header h3 { margin: 0 !important; }
-        .toggle-card-btn { background: transparent !important; color: var(--text) !important; border: none !important; box-shadow: none !important; font-size: 1.3em !important; padding: 10px !important; margin: -10px !important; width: auto !important; min-width: auto !important; cursor: pointer; opacity: 0.6; transition: 0.2s; outline: none; }
-        .toggle-card-btn:hover { opacity: 1; transform: scale(1.1); }
+        .card { background: var(--card-bg); padding: 28px; border-radius: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.03); width: 100%; border: 1px solid rgba(0,0,0,0.02); transition: 0.3s; }
+        .card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.05); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-header h3 { margin: 0 !important; font-size: 1.25em; font-weight: 800; color: var(--text); }
+        .toggle-card-btn { background: var(--bg) !important; color: var(--text) !important; border: none !important; border-radius: 50% !important; width: 32px !important; height: 32px !important; display:flex; align-items:center; justify-content:center; padding: 0 !important; margin: 0 !important; cursor: pointer; transition: 0.3s; }
+        .toggle-card-btn:hover { background: var(--primary) !important; color: white !important; transform: scale(1.1); }
         .card-content { transition: opacity 0.3s; width: 100%; }
 
-        .balance { font-size: 1.8em; font-weight: bold; margin: 10px 0; display: block;}
+        .balance { font-size: 2.2em; font-weight: 800; margin: 10px 0; display: block; color: var(--text); letter-spacing: -0.5px; }
         
-        input:not([type="checkbox"]):not([type="radio"]), select, textarea { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); font-family:inherit; }
-        button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; transition: 0.2s; }
-        button:hover { opacity: 0.9; }
-        .btn-small { width: auto !important; margin: 0 !important; padding: 10px 15px !important; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
+        /* --- FORMULAIRES DOUX --- */
+        input:not([type="checkbox"]):not([type="radio"]), select, textarea { width: 100%; padding: 14px 18px; margin-top: 8px; border: 1px solid var(--border); border-radius: 16px; background: #FDFBF7; color: var(--text); font-family:inherit; font-size: 1em; transition: 0.3s; outline: none; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(212, 163, 115, 0.1); background: var(--card-bg); }
+        
+        button { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 18px; cursor: pointer; font-weight: 800; font-size: 1.05em; width: 100%; margin-top: 20px; transition: 0.3s; font-family: inherit; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 163, 115, 0.4); }
+        button:active { transform: translateY(0); }
+        
+        .btn-small { width: auto !important; margin: 0 !important; padding: 10px 20px !important; font-size: 0.9em; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.02); border-radius: 14px; }
+        .btn-small:hover { background: var(--bg); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: var(--primary); border-color: var(--primary); }
 
-        .transaction-type-toggle { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }
+        /* --- RADIO BUTTONS (DÉPENSE/REVENU) --- */
+        .transaction-type-toggle { display: flex; gap: 12px; margin-bottom: 20px; width: 100%; }
         .radio-label { flex: 1; cursor: pointer; }
         .radio-label input { display: none; } 
-        .radio-btn { display: block; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; transition: 0.2s; background: var(--bg); border: 2px solid var(--border); color: var(--text); }
-        .radio-label input[value="expense"]:checked + .radio-btn { background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c; }
-        .radio-label input[value="income"]:checked + .radio-btn { background: rgba(46, 204, 113, 0.1); border-color: #2ecc71; color: #2ecc71; }
+        .radio-btn { display: block; text-align: center; padding: 14px; border-radius: 16px; font-weight: 800; transition: 0.3s; background: var(--bg); border: 2px solid transparent; color: var(--text); opacity: 0.7; }
+        .radio-label input[value="expense"]:checked + .radio-btn { background: rgba(224, 122, 95, 0.1); border-color: var(--danger); color: var(--danger); opacity: 1; }
+        .radio-label input[value="income"]:checked + .radio-btn { background: rgba(129, 178, 154, 0.1); border-color: var(--success); color: var(--success); opacity: 1; }
 
+        /* --- SWITCH TOGGLES --- */
         .switch-container { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; flex-shrink: 0; }
+        .switch { position: relative; display: inline-block; width: 52px; height: 30px; flex-shrink: 0; }
         .switch input { display: none; }
-        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 34px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 4px; bottom: 4px; background-color: white; transition: .4s cubic-bezier(0.25, 0.8, 0.25, 1); border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         input:checked + .slider { background-color: var(--primary); }
         input:checked + .slider:before { transform: translateX(22px); }
-        .switch-important input:checked + .slider { background-color: #e74c3c; }
+        .switch-important input:checked + .slider { background-color: var(--danger); }
 
-        .progress-bar { width: 100%; background: var(--border); border-radius: 10px; height: 12px; overflow: hidden; margin-top: 10px; }
-        .progress-fill { height: 100%; transition: 0.6s ease; }
-        .green { background: #2ECC71; } .orange { background: #f39c12; } .red { background: #E74C3C; }
+        /* --- BARRES DE PROGRESSION --- */
+        .progress-bar { width: 100%; background: var(--bg); border-radius: 20px; height: 14px; overflow: hidden; margin-top: 12px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); }
+        .progress-fill { height: 100%; transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1); border-radius: 20px; }
+        .green { background: var(--success); } .orange { background: #F2CC8F; } .red { background: var(--danger); }
 
-        .table-container { padding: 0; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; background: var(--card-bg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        /* --- TABLEAUX --- */
+        .table-container { padding: 0; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 20px; background: var(--card-bg); box-shadow: 0 8px 24px rgba(0,0,0,0.03); border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
+        th { padding: 18px 15px; text-align: left; border-bottom: 2px solid var(--bg); font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; color: var(--text); opacity: 0.6; font-weight: 800; }
+        td { padding: 15px; text-align: left; border-bottom: 1px solid var(--bg); font-size: 0.95em; font-weight: 600; color: var(--text); vertical-align: middle;}
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: rgba(0,0,0,0.01); }
 
-        .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: var(--primary); width: 100%; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; width: 100%; }
-        .calendar-day { min-height: 80px; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: rgba(0,0,0,0.02); font-size: 0.8em; display: flex; flex-direction: column; gap: 2px; }
-        .calendar-day.empty { background: transparent; border: none; }
-        .calendar-day .day-num { font-weight: bold; margin-bottom: 2px; text-align: right; color: var(--text); }
-        .calendar-day.today { border: 2px solid var(--primary); background: rgba(74, 144, 226, 0.05); }
-        .calendar-day.today .day-num { color: var(--primary); font-size: 1.2em; }
-        .badge { padding: 3px 5px; border-radius: 4px; color: #fff; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition:0.2s; }
-        .badge:hover { opacity: 0.8; }
-        .badge-exp { background: #e74c3c; } .badge-inc { background: #2ecc71; }
-        .badge-perso { background: #4A90E2; } .badge-pro { background: #9b59b6; }
-        .badge-important { border-left: 4px solid #f1c40f; font-weight: bold; }
+        /* --- CALENDRIER --- */
+        .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 800; margin-bottom: 10px; font-size: 0.9em; color: var(--primary); width: 100%; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%; }
+        .calendar-day { min-height: 90px; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); font-size: 0.8em; display: flex; flex-direction: column; gap: 4px; transition: 0.2s; }
+        .calendar-day:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.05); z-index: 2; position: relative;}
+        .calendar-day.empty { background: transparent; border: none; box-shadow: none; pointer-events: none;}
+        .calendar-day .day-num { font-weight: 800; margin-bottom: 4px; text-align: right; color: var(--text); opacity: 0.5; font-size: 1.1em;}
+        .calendar-day.today { border: 2px solid var(--primary); background: var(--card-bg); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.15); }
+        .calendar-day.today .day-num { color: var(--primary); opacity: 1; }
+        .badge { padding: 4px 8px; border-radius: 8px; color: #fff; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition:0.2s; font-weight: 700; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .badge:hover { opacity: 0.9; transform: translateY(-1px); }
+        .badge-exp { background: var(--danger); } .badge-inc { background: var(--success); }
+        .badge-perso { background: var(--primary); } .badge-pro { background: #3D405B; }
+        .badge-important { border-left: 4px solid #F2CC8F; }
 
-        .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; font-size: 2em; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 900; border: none; transition: 0.2s; }
-        .fab-btn:hover { transform: scale(1.1); }
+        /* --- SAISIE RAPIDE (FAB) --- */
+        .fab-btn { position: fixed; bottom: 35px; right: 35px; width: 65px; height: 65px; border-radius: 22px; background: var(--primary); color: white; font-size: 2.2em; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(212, 163, 115, 0.4); cursor: pointer; z-index: 900; border: none; transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .fab-btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 15px 35px rgba(212, 163, 115, 0.5); }
         
-        #global-announcement { display:none; background:#e74c3c; color:white; padding:12px; text-align:center; font-weight:bold; width:100%; border-radius:8px; margin-bottom:20px; animation: slideDown 0.5s ease; }
+        #global-announcement { display:none; background:var(--danger); color:white; padding:15px; text-align:center; font-weight:800; width:100%; border-radius:16px; margin-bottom:25px; animation: slideDown 0.5s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 4px 15px rgba(224, 122, 95, 0.3); }
         
-        .view-section { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .view-section { animation: fadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 800; justify-content: space-around; padding: 10px 0; border-top: 1px solid var(--border); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
-        .bottom-nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text); text-decoration: none; font-size: 0.75em; gap: 4px; cursor: pointer; opacity: 0.5; transition: 0.2s; }
-        .bottom-nav-item.active { opacity: 1; color: var(--primary); font-weight: bold; }
-        .bottom-nav-item span { font-size: 1.5em; }
+        /* 📱 BARRE DE NAVIGATION MOBILE DOUCE */
+        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); box-shadow: 0 -5px 30px rgba(0,0,0,0.05); z-index: 800; justify-content: space-around; padding: 12px 10px; border-top: 1px solid rgba(0,0,0,0.03); padding-bottom: calc(12px + env(safe-area-inset-bottom)); border-radius: 30px 30px 0 0; }
+        .bottom-nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text); text-decoration: none; font-size: 0.75em; gap: 6px; cursor: pointer; opacity: 0.4; transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); font-weight: 700; }
+        .bottom-nav-item.active { opacity: 1; color: var(--primary); transform: translateY(-3px); }
+        .bottom-nav-item span { font-size: 1.6em; transition: 0.3s; }
+        .bottom-nav-item.active span { transform: scale(1.15); }
 
         @media (max-width: 850px) {
-            .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
+            .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.1); border-right:none; border-radius: 0 30px 30px 0; }
             .sidebar.mobile-open { transform: translateX(0); }
-            .main-content { margin-left: 0 !important; padding: 15px; width: 100vw; max-width: 100vw; overflow-x: hidden; padding-bottom: 160px; } 
-            .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: stretch; } 
-            .layout-split { display: flex; flex-direction: column; gap: 15px; width: 100%; }
-            .card { padding: 15px; width: 100%; box-sizing: border-box; }
-            .action-bar { flex-direction: column; align-items: stretch; }
-            .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 5px !important; }
+            .main-content { margin-left: 0 !important; padding: 20px; width: 100vw; max-width: 100vw; overflow-x: hidden; padding-bottom: 160px; } 
+            .grid-stats { display: flex; flex-direction: column; gap: 20px; width: 100%; align-items: stretch; } 
+            .layout-split { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+            .card { padding: 20px; width: 100%; box-sizing: border-box; }
+            .action-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+            .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 0 !important; margin-top:0 !important; }
             .action-bar-spacer { display: none; }
-            .calendar-day { min-height: 60px; font-size: 0.7em; }
-            .fab-btn { bottom: 85px; right: 20px; width: 55px; height: 55px; } 
+            .calendar-day { min-height: 70px; font-size: 0.75em; }
+            .fab-btn { bottom: 95px; right: 20px; width: 60px; height: 60px; border-radius: 20px; } 
             .bottom-nav { display: flex; } 
+            
+            /* Ajustements typographiques mobile */
+            .balance { font-size: 1.8em; }
+            h2 { font-size: 1.4em; }
         }
-
-        /* 🐼 STYLES POUR LA PIECE 3D DU PANDA 🐼 */
-        .panda-stat-row { display:flex; align-items:center; gap:10px; margin-bottom:5px; font-weight:bold; font-size:0.85em; }
-        .panda-stat-row .progress-bar { margin:0; flex:1; height:10px; background:rgba(0,0,0,0.1); }
-        .floating-particle { position: absolute; pointer-events: none; z-index: 4000; font-size: 24px; animation: floatUp 1s ease-out forwards; }
-        @keyframes floatUp { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-50px) scale(1.5); opacity: 0; } }
-        
-        /* 🧽 Effet visuel quand le mode Brosse est actif */
-        .washing-active { box-shadow: 0 0 15px #3498db !important; transform: scale(1.1); background:#2980b9 !important; border: 2px solid white; }
     </style>
 </head>
 <body>
 
 <div id="mobile-overlay" class="mobile-overlay"></div>
 
-<div id="custom-dialog-overlay" class="fullscreen-overlay" style="display:none; z-index: 5000; background: rgba(0,0,0,0.8);">
-    <div class="auth-box" style="border: 2px solid var(--primary); padding: 25px;">
-        <h2 id="custom-dialog-title" style="color: var(--primary); margin-top:0;">Information</h2>
-        <p id="custom-dialog-msg" style="color: var(--text); font-size: 1em; margin-bottom: 25px; line-height:1.5;"></p>
-        <div id="custom-dialog-btns" style="display: flex; gap: 10px; justify-content: center;"></div>
+<div id="custom-dialog-overlay" class="fullscreen-overlay" style="display:none; z-index: 5000;">
+    <div class="auth-box" style="border: none; padding: 35px 25px;">
+        <h2 id="custom-dialog-title" style="color: var(--primary); margin-top:0; font-weight:800;">Information</h2>
+        <p id="custom-dialog-msg" style="color: var(--text); font-size: 1.05em; margin-bottom: 30px; line-height:1.6; font-weight:600;"></p>
+        <div id="custom-dialog-btns" style="display: flex; gap: 15px; justify-content: center; flex-wrap:wrap;"></div>
     </div>
 </div>
 
 <button id="fab-quick-add" class="fab-btn" style="display:none;" title="Saisie rapide">＋</button>
 
-<div id="modal-quick-add" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.7);">
+<div id="modal-quick-add" class="fullscreen-overlay" style="display:none; z-index: 3000;">
     <div class="auth-box" style="position:relative;">
-        <button id="btn-close-quick-add" style="position:absolute; top:-10px; right:10px; background:none; color:var(--text); font-size:1.5em; width:auto; border:none; margin:0; padding:0;">✕</button>
-        <h2 style="color: var(--primary); margin-top:0;">⚡ Saisie Rapide</h2>
+        <button id="btn-close-quick-add" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6;">✕</button>
+        <h2 style="color: var(--primary); margin-top:0; font-weight:800;">⚡ Saisie Rapide</h2>
         <form id="quick-expense-form">
             <div class="transaction-type-toggle">
                 <label class="radio-label"><input type="radio" name="quick-trans-type" value="expense" checked><span class="radio-btn">📉 Dépense</span></label>
@@ -174,208 +212,136 @@
             <input type="text" id="quick-desc" placeholder="Quoi ? (Ex: Boulangerie)" required>
             <input type="number" id="quick-amount" placeholder="Combien ? (€)" step="0.01" required>
             <select id="quick-category" required></select>
-            <button type="submit">Valider</button>
+            <button type="submit" style="margin-top:25px;">Valider</button>
         </form>
     </div>
 </div>
 
-<div id="modal-feedback" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.7);">
+<div id="modal-feedback" class="fullscreen-overlay" style="display:none; z-index: 3000;">
     <div class="auth-box" style="position:relative;">
-        <button id="btn-close-feedback" style="position:absolute; top:-10px; right:10px; background:none; color:var(--text); font-size:1.5em; width:auto; border:none; margin:0; padding:0;">✕</button>
-        <h2 style="color: var(--primary); margin-top:0;">💡 Une idée ? Un bug ?</h2>
-        <p style="font-size:0.9em; color:#666;">Envoyez votre message directement à l'administrateur !</p>
+        <button id="btn-close-feedback" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6;">✕</button>
+        <h2 style="color: var(--primary); margin-top:0; font-weight:800;">💡 Une idée ? Un bug ?</h2>
+        <p style="font-size:0.95em; color:var(--text); opacity:0.7; margin-bottom:20px; font-weight:600;">Envoyez votre message directement à l'administrateur !</p>
         <form id="feedback-form">
             <textarea id="feedback-text" rows="4" placeholder="Décrivez votre idée ou le problème rencontré..." required></textarea>
-            <button type="submit">Envoyer le message</button>
+            <button type="submit" style="margin-top:20px;">Envoyer le message</button>
         </form>
     </div>
 </div>
 
 <div id="screen-maintenance" class="fullscreen-overlay" style="display:none; z-index: 4000;">
-    <div class="auth-box" style="border: 3px dashed #f39c12; background: var(--card-bg);">
-        <h1 style="font-size: 3.5em; margin: 0 0 10px 0;">🛠️</h1>
-        <h2 style="color: #f39c12; margin-top:0;">Maintenance en cours</h2>
-        <p style="color: var(--text); font-size: 0.95em;">Budget Duo est actuellement en cours de mise à jour pour vous offrir de nouvelles fonctionnalités.<br><br>Veuillez revenir un peu plus tard !</p>
-        <span id="btn-admin-bypass" style="display:block; margin-top:30px; font-size:1.2em; color:rgba(0,0,0,0.1); cursor:pointer;" title="Accès technique">🔒</span>
+    <div class="auth-box" style="border: 2px dashed var(--danger);">
+        <h1 style="font-size: 4em; margin: 0 0 15px 0;">🛠️</h1>
+        <h2 style="color: var(--danger); margin-top:0; font-weight:800;">Maintenance en cours</h2>
+        <p style="color: var(--text); font-size: 1.05em; font-weight:600; line-height:1.6;">Budget Duo est actuellement en cours de mise à jour pour vous offrir de nouvelles fonctionnalités.<br><br>Veuillez revenir un peu plus tard !</p>
+        <span id="btn-admin-bypass" style="display:block; margin-top:35px; font-size:1.5em; opacity:0.1; cursor:pointer;" title="Accès technique">🔒</span>
     </div>
 </div>
 
-<div id="reminder-popup" class="fullscreen-overlay" style="display:none; z-index: 2500; background: rgba(0,0,0,0.8);">
-    <div class="auth-box" style="background: var(--card-bg); color: var(--text); border: 3px solid var(--primary);">
-        <h2 style="color: var(--primary); margin-top:0;">🔔 Rappels</h2>
-        <ul id="reminder-list" style="list-style:none; padding:0; text-align:left; max-height: 200px; overflow-y: auto; margin-bottom:20px;"></ul>
-        <button id="btn-close-reminder" style="background: var(--secondary); color:#333; margin-top:0;">Fermer</button>
+<div id="reminder-popup" class="fullscreen-overlay" style="display:none; z-index: 2500;">
+    <div class="auth-box" style="border: 2px solid var(--primary);">
+        <h2 style="color: var(--primary); margin-top:0; font-weight:800;">🔔 Rappels</h2>
+        <ul id="reminder-list" style="list-style:none; padding:0; text-align:left; max-height: 250px; overflow-y: auto; margin-bottom:25px;"></ul>
+        <button id="btn-close-reminder" style="background: var(--bg); color:var(--text); margin-top:0;">Fermer</button>
     </div>
 </div>
 
 <div id="screen-auth" class="fullscreen-overlay">
     <div class="auth-box">
-        <h1 style="color: var(--primary); margin-bottom: 10px;">💎 Budget Duo</h1>
-        <h3 id="auth-title">Connexion</h3>
+        <h1 style="color: var(--primary); margin-bottom: 5px; font-weight:800; font-size:2.2em;">💎 Budget Duo</h1>
+        <h3 id="auth-title" style="margin-bottom: 25px; opacity:0.7;">Connexion</h3>
         <form id="login-form">
             <input type="email" id="auth-email" required placeholder="Adresse email">
             <div style="position:relative;">
-                <input type="password" id="auth-password" required placeholder="Mot de passe" style="padding-right: 40px;">
-                <span id="toggle-password" style="position:absolute; right:12px; top:20px; cursor:pointer; font-size:1.2em; user-select:none;">👁️</span>
+                <input type="password" id="auth-password" required placeholder="Mot de passe" style="padding-right: 45px;">
+                <span id="toggle-password" style="position:absolute; right:15px; top:21px; cursor:pointer; font-size:1.2em; user-select:none; opacity:0.6;">👁️</span>
             </div>
-            <span id="auth-forgot-pwd" style="display:block; text-align:right; font-size:0.85em; color:var(--primary); cursor:pointer; margin-top:8px; margin-bottom:15px; font-weight:500;">Mot de passe oublié ?</span>
+            <span id="auth-forgot-pwd" style="display:block; text-align:right; font-size:0.9em; color:var(--primary); cursor:pointer; margin-top:12px; margin-bottom:20px; font-weight:700;">Mot de passe oublié ?</span>
             <button type="submit" id="auth-submit-btn">Se connecter</button>
         </form>
-        <p id="auth-error" style="color:#E74C3C; display:none; font-size:0.85em; margin-top:15px; font-weight:bold;"></p>
-        <span id="auth-toggle-mode" style="font-size:0.85em; color:var(--primary); cursor:pointer; display:block; margin-top:20px; text-decoration: underline;">S'inscrire</span>
+        <p id="auth-error" style="color:var(--danger); display:none; font-size:0.9em; margin-top:20px; font-weight:800; background:rgba(224, 122, 95, 0.1); padding:10px; border-radius:10px;"></p>
+        <span id="auth-toggle-mode" style="font-size:0.95em; color:var(--primary); cursor:pointer; display:block; margin-top:25px; font-weight:700;">S'inscrire</span>
     </div>
 </div>
 
 <div id="screen-setup" class="fullscreen-overlay" style="display:none;">
     <div class="auth-box">
-        <h2>🏠 Configuration</h2>
-        <input type="text" id="setup-pseudo" placeholder="Votre Prénom (Ex: Thomas)" required style="margin-bottom: 25px; text-align:center; font-weight:bold; border: 2px solid var(--primary);">
-        <input type="text" id="join-code" placeholder="CODE PARTENAIRE" style="text-align:center; text-transform:uppercase; font-weight: bold; letter-spacing: 2px;">
-        <button id="btn-join-budget" style="background:var(--secondary); color:#333;">Rejoindre le budget</button>
-        <div style="margin: 25px 0; color:#aaa; font-size:0.8em;">— OU —</div>
-        <button id="btn-create-budget">Créer un foyer</button>
+        <h2 style="font-weight:800; color:var(--text);">🏠 Configuration</h2>
+        <input type="text" id="setup-pseudo" placeholder="Votre Prénom (Ex: Thomas)" required style="margin-bottom: 30px; text-align:center; font-weight:800; font-size:1.1em; border: 2px solid var(--primary);">
+        <input type="text" id="join-code" placeholder="CODE PARTENAIRE" style="text-align:center; text-transform:uppercase; font-weight: 800; letter-spacing: 3px; font-size:1.1em;">
+        <button id="btn-join-budget" style="background:var(--secondary); color:var(--text);">Rejoindre le budget</button>
+        <div style="margin: 30px 0; color:var(--text); opacity:0.4; font-weight:800; font-size:0.9em;">— OU —</div>
+        <button id="btn-create-budget">Créer un nouveau foyer</button>
     </div>
 </div>
 
 <nav class="sidebar" id="sidebar">
     <h2>💎 Budget Duo</h2>
     <ul class="nav-menu">
-        <li id="nav-dashboard" class="nav-item active">📊 Dashboard</li>
-        <li id="nav-subs" class="nav-item">🔁 Frais Fixes</li>
-        <li id="nav-calendar" class="nav-item">📅 Calendrier</li>
-        <li id="nav-panda" class="nav-item" style="display:none; background:rgba(56, 142, 60, 0.1); color:#388E3C; font-weight:bold; border:1px solid #388E3C;">🐼 Mon Panda</li>
-        
-        <li id="nav-profile" class="nav-item">👤 Mon Profil</li>
-        <li id="btn-open-feedback" class="nav-item" style="color:var(--secondary); margin-top:15px; background:rgba(255,255,255,0.05);">💡 Feedback</li>
-        <li id="nav-admin" class="nav-item" style="display:none; background:#d35400; color:white; margin-top:20px;">👑 Administration</li>
+        <li id="nav-dashboard" class="nav-item active"><span>📊</span> Dashboard</li>
+        <li id="nav-subs" class="nav-item"><span>🔁</span> Frais Fixes</li>
+        <li id="nav-calendar" class="nav-item"><span>📅</span> Calendrier</li>
+        <li id="nav-profile" class="nav-item"><span>👤</span> Mon Profil</li>
+        <li id="btn-open-feedback" class="nav-item" style="color:var(--primary); margin-top:20px; background:var(--card-bg); justify-content:center;">💡 Une Idée ?</li>
+        <li id="nav-admin" class="nav-item" style="display:none; background:var(--danger); color:white; margin-top:20px; justify-content:center;">👑 Administration</li>
     </ul>
     <div class="sidebar-footer">
-        <button id="logout-btn" style="background:#E74C3C; margin-top:0;">🔓 Déconnexion</button>
+        <button id="logout-btn" style="background:transparent; color:var(--danger); border:2px solid var(--danger); margin-top:0; box-shadow:none;">🔓 Déconnexion</button>
     </div>
 </nav>
 
 <main class="main-content" id="screen-app" style="display:none;">
     <div class="top-header">
         <button id="toggle-sidebar" class="toggle-sidebar-btn">☰</button>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <span id="status-indicator" style="font-size:0.75em; color:#2ecc71; font-weight: bold; white-space: nowrap;">● Connecté</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span id="status-indicator" style="font-size:0.85em; color:var(--success); font-weight: 800; white-space: nowrap; background:var(--card-bg); padding:8px 12px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">● Connecté</span>
             <select id="theme-selector">
-                <option value="light">☀️ Clair</option>
-                <option value="dark">🌙 Sombre</option>
-                <option value="cosy">☕ Cosy</option>
-                <option value="panda-geant">🐼 Panda Géant</option>
-                <option value="panda-roux">🦊 Panda Roux</option>
+                <option value="light">☁️ Cocooning</option>
+                <option value="dark">🌙 Nuit Douce</option>
+                <option value="cosy">☕ Café Crème</option>
+                <option value="panda-geant">🐼 Forêt Bambou</option>
+                <option value="panda-roux">🦊 Feuille d'Automne</option>
             </select>
         </div>
     </div>
 
     <div id="global-announcement"></div>
     
-    <div id="view-panda" class="view-section" style="display:none;">
-        <h2 style="color:#388E3C; margin-top:0;">🐼 Le Compagnon du Foyer</h2>
-        
-        <div class="layout-split">
-            <div class="card" style="position:relative; overflow:hidden; background: linear-gradient(to bottom, #A5D6A7, #E8F5E9); border: 2px solid #388E3C; padding:15px;">
-                
-                <div id="panda-room-overlay" style="position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(10, 10, 40, 0.85); z-index:2; pointer-events:none; opacity:0; transition: opacity 1.5s ease;"></div>
-                
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:10px; position:relative; z-index:3;">
-                    <div>
-                        <div class="panda-stat-row">❤️ Amour <div class="progress-bar"><div id="p-bar-love" class="progress-fill" style="background:#e74c3c; width:100%;"></div></div></div>
-                        <div class="panda-stat-row">🎋 Faim <div class="progress-bar"><div id="p-bar-hunger" class="progress-fill" style="background:#f1c40f; width:100%;"></div></div></div>
-                    </div>
-                    <div>
-                        <div class="panda-stat-row">🧼 Hygiène <div class="progress-bar"><div id="p-bar-hygiene" class="progress-fill" style="background:#3498db; width:100%;"></div></div></div>
-                        <div class="panda-stat-row">⚡ Énergie <div class="progress-bar"><div id="p-bar-energy" class="progress-fill" style="background:#9b59b6; width:100%;"></div></div></div>
-                    </div>
-                </div>
-                
-                <div id="panda-mood-bubble" style="position:absolute; top:70px; right:15px; background:white; padding:10px; border-radius:15px; z-index:4; font-size:0.85em; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.2); max-width:150px; text-align:center;">
-                    ...
-                </div>
-
-                <div id="panda-3d-container" style="height:350px; position:relative; z-index:3; touch-action:none; border-radius:12px; background:rgba(255,255,255,0.2);">
-                    <model-viewer id="panda-3d" 
-                        src="panda.glb" 
-                        alt="Panda 3D" 
-                        auto-rotate 
-                        camera-controls 
-                        interaction-prompt="none"
-                        style="width:100%; height:100%;">
-                        <div slot="poster" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#555;">
-                            <span style="font-size:4em;">🐼</span>
-                            <small>Mettez un fichier "panda.glb" sur votre serveur pour le voir en 3D !</small>
-                        </div>
-                    </model-viewer>
-                    
-                    <div id="acc-hat" style="display:none; position:absolute; top:10%; left:50%; transform:translateX(-50%); font-size:4em; pointer-events:none;">🎩</div>
-                    <div id="acc-glasses" style="display:none; position:absolute; top:35%; left:50%; transform:translateX(-50%); font-size:4em; pointer-events:none;">🕶️</div>
-                </div>
-
-                <div style="display:flex; justify-content:center; gap:10px; position:relative; z-index:3; margin-top:15px;">
-                    <button id="btn-panda-feed" class="btn-small" style="background:#2ecc71; color:white; font-size:1.2em;" title="Nourrir">🎋</button>
-                    <button id="btn-panda-wash" class="btn-small" style="background:#3498db; color:white; font-size:1.2em; transition:0.3s;" title="Laver">🧽</button>
-                    <button id="btn-panda-sleep" class="btn-small" style="background:#34495e; color:white; font-size:1.2em;" title="Dormir">💡</button>
-                </div>
-                <p style="text-align:center; font-size:0.8em; color:#555; position:relative; z-index:3; margin-top:10px;"><b>Câlin :</b> Cliquez sur le panda. <br><b>Bain :</b> Activez l'éponge 🧽 et frottez !</p>
-            </div>
-
-            <div class="card">
-                <h3 style="margin-top:0;">🛒 Boutique d'Accessoires</h3>
-                <div style="background:#f1c40f; color:#fff; padding:15px; border-radius:8px; font-weight:bold; font-size:1.2em; text-align:center; margin-bottom:15px;">
-                    Pièces : <span id="panda-coins-display">0</span> 🪙
-                </div>
-                <p style="font-size:0.85em; color:#666;">Astuce : Gagnez des pièces en vous connectant chaque jour (+10🪙) ou en ajoutant de l'argent dans vos objectifs d'épargne (+50🪙) !</p>
-                
-                <ul style="list-style:none; padding:0; margin-top:20px;">
-                    <li style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(0,0,0,0.02); border:1px solid var(--border); border-radius:8px; margin-bottom:10px;">
-                        <strong>🎩 Chapeau Melon</strong>
-                        <button id="btn-buy-hat" class="btn-small" style="background:#f39c12; color:white;">100 🪙</button>
-                    </li>
-                    <li style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(0,0,0,0.02); border:1px solid var(--border); border-radius:8px;">
-                        <strong>🕶️ Lunettes de Star</strong>
-                        <button id="btn-buy-glasses" class="btn-small" style="background:#f39c12; color:white;">200 🪙</button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
     <div id="view-subscriptions" class="view-section" style="display:none;">
-        <h2 style="color:var(--primary); margin-top:0;">🔁 Abonnements & Frais Fixes</h2>
+        <h2 style="color:var(--primary); margin-top:0; font-weight:800; font-size:1.8em;">🔁 Abonnements & Frais Fixes</h2>
         <div class="layout-split">
             <div class="card">
-                <h3 style="margin-top:0;">➕ Ajouter un abonnement</h3>
+                <h3 style="margin-top:0;">➕ Nouvel abonnement</h3>
                 <form id="sub-form">
                     <input type="text" id="sub-name" placeholder="Nom (Ex: Netflix, Loyer)" required>
                     <input type="number" id="sub-amount" placeholder="Montant mensuel (€)" step="0.01" required>
                     <select id="sub-category" required></select>
-                    <label style="font-size:0.85em; font-weight:bold; display:block; margin-top:10px;">Prélevé le :</label>
+                    <label style="font-size:0.9em; font-weight:700; display:block; margin-top:15px; margin-left:5px; color:var(--text); opacity:0.8;">Prélevé le :</label>
                     <input type="number" id="sub-day" placeholder="Jour du mois (1-31)" min="1" max="31" required>
                     <button type="submit">Enregistrer l'abonnement</button>
                 </form>
             </div>
             <div class="card">
                 <h3 style="margin-top:0;">Mes Frais Fixes</h3>
-                <p style="font-size:0.9em; color:#666;">Total estimé : <strong id="total-subs-amount" style="color:#e74c3c;">0.00 €</strong> / mois</p>
-                <ul id="subs-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
+                <p style="font-size:1em; color:var(--text); opacity:0.8; font-weight:600;">Total estimé : <strong id="total-subs-amount" style="color:var(--danger); font-size:1.2em;">0.00 €</strong> / mois</p>
+                <ul id="subs-list" style="list-style:none; padding:0; margin-top:20px;"></ul>
             </div>
         </div>
     </div>
 
     <div id="view-calendar" class="view-section" style="display:none;">
-        <h2 style="color:var(--primary); margin-top:0;">📅 Calendrier du Foyer</h2>
+        <h2 style="color:var(--primary); margin-top:0; font-weight:800; font-size:1.8em;">📅 Calendrier du Foyer</h2>
         <div class="layout-split">
             <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <button id="cal-prev" class="btn-small">⬅️ Préc.</button>
-                    <h3 id="cal-month-display" style="margin:0;">---</h3>
-                    <button id="cal-next" class="btn-small">Suiv. ➡️</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <button id="cal-prev" class="btn-small" style="padding:12px 20px !important;">⬅️ Préc.</button>
+                    <h3 id="cal-month-display" style="margin:0; font-size:1.3em;">---</h3>
+                    <button id="cal-next" class="btn-small" style="padding:12px 20px !important;">Suiv. ➡️</button>
                 </div>
-                <div style="margin-bottom:15px; background:var(--bg); padding:12px; border-radius:8px;">
+                <div style="margin-bottom:20px; background:var(--bg); padding:15px; border-radius:16px;">
                     <label class="switch-container">
                         <div class="switch"><input type="checkbox" id="cal-show-expenses" checked><span class="slider"></span></div>
-                        <span style="font-size: 0.95em; font-weight: 500;">💰 Afficher les transactions</span>
+                        <span style="font-size: 1em; font-weight: 700; color:var(--text);">💰 Afficher les transactions</span>
                     </label>
                 </div>
                 <div class="calendar-header-days"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div>
@@ -385,166 +351,178 @@
             <div class="card">
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
-                    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px;">
-                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                            <label style="font-size:0.85em; font-weight:bold; color:var(--text); width:50px;">Début:</label>
-                            <input type="date" id="ev-date-start" required style="margin-top:0; flex:2; padding:8px;">
-                            <input type="time" id="ev-time-start" style="margin-top:0; flex:1; padding:8px;" title="Heure (Optionnelle)">
+                    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:15px; background:var(--bg); padding:15px; border-radius:16px;">
+                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                            <label style="font-size:0.9em; font-weight:800; color:var(--text); opacity:0.7; width:55px;">Début:</label>
+                            <input type="date" id="ev-date-start" required style="margin-top:0; flex:2;">
+                            <input type="time" id="ev-time-start" style="margin-top:0; flex:1;" title="Heure (Optionnelle)">
                         </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                            <label style="font-size:0.85em; font-weight:bold; color:var(--text); width:50px;">Fin:</label>
-                            <input type="date" id="ev-date-end" required style="margin-top:0; flex:2; padding:8px;">
-                            <input type="time" id="ev-time-end" style="margin-top:0; flex:1; padding:8px;" title="Heure (Optionnelle)">
+                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                            <label style="font-size:0.9em; font-weight:800; color:var(--text); opacity:0.7; width:55px;">Fin:</label>
+                            <input type="date" id="ev-date-end" required style="margin-top:0; flex:2;">
+                            <input type="time" id="ev-time-end" style="margin-top:0; flex:1;" title="Heure (Optionnelle)">
                         </div>
                     </div>
                     <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste, Vacances...)" required>
                     <input type="text" id="ev-type" placeholder="Catégorie (Libre. Ex: Santé, Pro...)" list="default-event-types" required>
                     <datalist id="default-event-types"><option value="👤 Personnel"></option><option value="💼 Professionnel"></option><option value="🎉 Fête / Anniversaire"></option><option value="🏥 Santé / RDV"></option><option value="✈️ Vacances"></option><option value="🛒 Courses / Achats"></option></datalist>
 
-                    <div style="margin:15px 0; background:rgba(231, 76, 60, 0.05); border: 1px solid rgba(231, 76, 60, 0.2); padding:12px; border-radius:8px;">
-                        <label class="switch-container" style="color:#e74c3c; font-weight:bold;">
+                    <div style="margin:20px 0; background:rgba(224, 122, 95, 0.08); border: 1px solid rgba(224, 122, 95, 0.2); padding:15px; border-radius:16px;">
+                        <label class="switch-container" style="color:var(--danger); font-weight:800;">
                             <div class="switch switch-important"><input type="checkbox" id="ev-important"><span class="slider"></span></div>
                             <span>⚠️ Événement Important</span>
                         </label>
                     </div>
 
-                    <label style="font-size:0.85em; font-weight:bold;">🔔 M'alerter via Pop-up :</label>
-                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
-                    <button type="submit">Ajouter au calendrier</button>
+                    <label style="font-size:0.9em; font-weight:700; margin-left:5px; color:var(--text); opacity:0.8;">🔔 M'alerter via Pop-up :</label>
+                    <select id="ev-reminder" style="margin-top:8px;"><option value="0">Aucun</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
+                    <button type="submit" style="margin-top:25px;">Ajouter au calendrier</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <div id="view-profile" class="view-section" style="display:none; max-width: 600px; margin: auto;">
-        <h2 style="color:var(--primary); margin-top:0; margin-bottom: 20px;">👤 Mon Profil & Foyer</h2>
-        <div class="card" style="margin-bottom: 25px;">
+    <div id="view-profile" class="view-section" style="display:none; max-width: 650px; margin: auto;">
+        <h2 style="color:var(--primary); margin-top:0; margin-bottom: 25px; font-weight:800; font-size:1.8em; text-align:center;">👤 Mon Profil & Foyer</h2>
+        <div class="card" style="margin-bottom: 25px; text-align:center;">
             <h3 style="margin-top:0;">Inviter un partenaire</h3>
-            <h2 id="display-invite-code" style="text-align:center; color:var(--primary); letter-spacing:8px; margin:15px 0; background:var(--bg); padding:15px; border-radius:8px; border: 2px dashed var(--secondary); word-break: break-all;">---</h2>
+            <p style="font-size:0.95em; color:var(--text); opacity:0.7; font-weight:600;">Partagez ce code pour gérer votre budget à deux.</p>
+            <h2 id="display-invite-code" style="color:var(--primary); font-size:2.5em; letter-spacing:10px; margin:20px 0; background:var(--bg); padding:20px; border-radius:20px; border: 2px dashed var(--primary); word-break: break-all;">---</h2>
         </div>
         <div class="card">
             <h3 style="margin-top:0;">Mon Prénom</h3>
-            <div style="display:flex; gap:10px; align-items: center;">
-                <input type="text" id="admin-pseudo" placeholder="Ex: Thomas" style="flex:1;">
-                <button id="btn-update-pseudo" class="btn-small" style="background:var(--secondary); color:#333;">Enregistrer</button>
+            <div style="display:flex; gap:12px; align-items: center;">
+                <input type="text" id="admin-pseudo" placeholder="Ex: Thomas" style="flex:1; margin-top:0;">
+                <button id="btn-update-pseudo" class="btn-small" style="background:var(--text); color:white; margin-top:0 !important; padding:14px 25px !important;">Enregistrer</button>
             </div>
-            <p id="profile-success" style="color:#2ecc71; font-size:0.85em; display:none; margin:10px 0 0 0; font-weight: bold;">✓ Mis à jour !</p>
+            <p id="profile-success" style="color:var(--success); font-size:0.95em; display:none; margin:15px 0 0 0; font-weight: 800;">✓ Profil mis à jour avec succès !</p>
         </div>
 
-        <div class="card" id="install-app-card" style="display:none; margin-top:25px; border:2px solid var(--primary); background:rgba(74, 144, 226, 0.05);">
+        <div class="card" id="install-app-card" style="display:none; margin-top:25px; border:2px solid var(--primary); background:rgba(212, 163, 115, 0.05);">
             <h3 style="margin-top:0; color:var(--primary);">📱 Installer l'application</h3>
-            <p style="font-size:0.9em; color:var(--text);">Ajoutez Budget Duo à votre écran d'accueil pour y accéder plus rapidement comme une vraie application !</p>
-            <button id="btn-install-pwa" style="background:var(--primary); color:#fff; width:100%;">Installer maintenant</button>
+            <p style="font-size:1em; color:var(--text); font-weight:600;">Ajoutez Budget Duo à votre écran d'accueil pour y accéder comme une vraie application native !</p>
+            <button id="btn-install-pwa" style="width:100%; margin-top:15px;">Installer maintenant</button>
         </div>
     </div>
 
     <div id="view-admin" class="view-section" style="display:none;">
-        <h2 style="color:#d35400; margin-top:0;">👑 Panneau d'Administration</h2>
-        <p style="color:#666;">Vue restreinte. Vous seul avez accès à ces données.</p>
+        <h2 style="color:var(--danger); margin-top:0; font-weight:800; font-size:1.8em;">👑 Panneau d'Administration</h2>
+        <p style="color:var(--text); opacity:0.7; font-weight:600; margin-bottom:30px;">Vue restreinte. Vous seul avez accès à ces données.</p>
         
-        <div class="card" style="border-top: 4px solid #f39c12; margin-bottom: 25px; background: rgba(243, 156, 18, 0.05);">
-            <h3 style="margin-top:0; color:#d35400;">📢 Annonce Globale</h3>
-            <input type="text" id="admin-announcement-input" placeholder="Message à afficher à tous les utilisateurs..." style="margin-bottom:10px;">
-            <button id="btn-admin-announce" class="btn-small" style="background:#f39c12; color:white; border:none; padding:10px 20px;">Publier l'annonce</button>
+        <div class="card" style="border-top: 5px solid #F2CC8F; margin-bottom: 25px; background: rgba(242, 204, 143, 0.1);">
+            <h3 style="margin-top:0; color:#D9A05B;">📢 Annonce Globale</h3>
+            <input type="text" id="admin-announcement-input" placeholder="Message à afficher à tous les utilisateurs..." style="margin-bottom:15px; background:white;">
+            <button id="btn-admin-announce" class="btn-small" style="background:#D9A05B; color:white; border:none; padding:12px 25px !important;">Publier l'annonce</button>
             
-            <hr style="border:none; border-top:1px dashed #d35400; margin:20px 0;">
-            <h3 style="margin-top:0; color:#d35400;">🛠️ Mode Maintenance</h3>
-            <label class="switch-container" style="color:#d35400; font-weight:bold;">
+            <hr style="border:none; border-top:2px dashed rgba(217, 160, 91, 0.3); margin:25px 0;">
+            <h3 style="margin-top:0; color:var(--danger);">🛠️ Mode Maintenance</h3>
+            <label class="switch-container" style="color:var(--danger); font-weight:800;">
                 <div class="switch switch-important"><input type="checkbox" id="admin-maintenance-toggle"><span class="slider"></span></div>
                 <span>Activer (Expulse tout le monde)</span>
             </label>
         </div>
 
-        <div class="card" style="border-top: 4px solid #9b59b6; margin-bottom: 25px; background: rgba(155, 89, 182, 0.05);">
-            <h3 style="margin-top:0; color:#8e44ad;">👁️ Mode Fantôme (Support)</h3>
-            <p style="font-size:0.85em;">Visualisez le budget d'un utilisateur pour l'aider.</p>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="admin-ghost-id" placeholder="ID du Foyer à infiltrer..." style="flex:1;">
-                <button id="btn-ghost-mode" class="btn-small" style="background:#8e44ad; color:white;">Infiltrer</button>
+        <div class="card" style="border-top: 5px solid #8ECAE6; margin-bottom: 25px; background: rgba(142, 202, 230, 0.1);">
+            <h3 style="margin-top:0; color:#457B9D;">👁️ Mode Fantôme (Support)</h3>
+            <p style="font-size:0.95em; font-weight:600; opacity:0.8;">Visualisez le budget d'un utilisateur pour l'aider.</p>
+            <div style="display:flex; gap:12px;">
+                <input type="text" id="admin-ghost-id" placeholder="ID du Foyer à infiltrer..." style="flex:1; margin-top:0; background:white;">
+                <button id="btn-ghost-mode" class="btn-small" style="background:#457B9D; color:white; margin-top:0 !important; padding:12px 25px !important;">Infiltrer</button>
             </div>
         </div>
 
         <div class="grid-stats">
-            <div class="card" style="border-top: 4px solid #3498db;"><h3>👥 Utilisateurs Inscrits</h3><span id="admin-tot-users" class="balance">0</span></div>
-            <div class="card" style="border-top: 4px solid #2ecc71;"><h3>🔥 Actifs (7 jours)</h3><span id="admin-active-users" class="balance" style="color:#2ecc71;">0</span></div>
-            <div class="card" style="border-top: 4px solid #e67e22;"><h3>🏠 Foyers Actifs</h3><span id="admin-tot-budgets" class="balance">0</span></div>
+            <div class="card" style="border-top: 5px solid #8ECAE6;"><h3>👥 Utilisateurs</h3><span id="admin-tot-users" class="balance" style="color:#457B9D;">0</span></div>
+            <div class="card" style="border-top: 5px solid var(--success);"><h3>🔥 Actifs (7j)</h3><span id="admin-active-users" class="balance" style="color:var(--success);">0</span></div>
+            <div class="card" style="border-top: 5px solid #F2CC8F;"><h3>🏠 Foyers</h3><span id="admin-tot-budgets" class="balance" style="color:#D9A05B;">0</span></div>
         </div>
 
-        <div class="card" style="margin-top:25px; overflow-x:auto;">
+        <div class="card" style="margin-top:30px; overflow-x:auto;">
             <h3 style="margin-top:0;">💡 Feedbacks & Idées Utilisateurs</h3>
-            <table style="min-width: 400px; font-size:0.85em;">
-                <thead style="background:rgba(0,0,0,0.05);"><tr><th>Date</th><th>Utilisateur</th><th>Message</th><th>Actions</th></tr></thead>
+            <table style="min-width: 500px;">
+                <thead style="background:var(--bg);"><tr><th>Date</th><th>Utilisateur</th><th>Message</th><th>Actions</th></tr></thead>
                 <tbody id="admin-feedback-list"></tbody>
             </table>
         </div>
 
-        <div class="layout-split" style="margin-top:25px;">
+        <div class="layout-split" style="margin-top:30px;">
             <div class="card" style="overflow-x:auto;">
                 <h3 style="margin-top:0;">Base Utilisateurs</h3>
-                <input type="text" id="search-admin-users" placeholder="🔍 Rechercher..." style="margin-top:0; margin-bottom:15px;">
-                <table style="min-width: 400px; font-size:0.85em;"><thead style="background:rgba(0,0,0,0.05);"><tr><th>Email</th><th>Dernière Co.</th><th>ID Foyer</th><th>Actions</th></tr></thead><tbody id="admin-user-list"></tbody></table>
+                <input type="text" id="search-admin-users" placeholder="🔍 Rechercher..." style="margin-top:0; margin-bottom:20px;">
+                <table style="min-width: 450px;"><thead style="background:var(--bg);"><tr><th>Email</th><th>Dernière Co.</th><th>ID Foyer</th><th>Actions</th></tr></thead><tbody id="admin-user-list"></tbody></table>
             </div>
             <div class="card" style="overflow-x:auto;">
                 <h3 style="margin-top:0;">Gestion des Foyers</h3>
-                <input type="text" id="search-admin-budgets" placeholder="🔍 Rechercher..." style="margin-top:0; margin-bottom:15px;">
-                <table style="min-width: 400px; font-size:0.85em;"><thead style="background:rgba(0,0,0,0.05);"><tr><th>Code</th><th>Créateur (ID)</th><th>Actions</th></tr></thead><tbody id="admin-budget-list"></tbody></table>
+                <input type="text" id="search-admin-budgets" placeholder="🔍 Rechercher..." style="margin-top:0; margin-bottom:20px;">
+                <table style="min-width: 400px;"><thead style="background:var(--bg);"><tr><th>Code</th><th>Créateur (ID)</th><th>Actions</th></tr></thead><tbody id="admin-budget-list"></tbody></table>
             </div>
         </div>
     </div>
 
     <div id="view-dashboard" class="view-section">
         <div class="action-bar">
-            <select id="filter-month" style="width:auto; margin:0;"></select>
-            <select id="filter-year" style="width:auto; margin:0;"></select>
+            <select id="filter-month" style="width:auto; margin:0; font-weight:700;"></select>
+            <select id="filter-year" style="width:auto; margin:0; font-weight:700;"></select>
             <div class="action-bar-spacer"></div> 
             <button id="btn-toggle-annual" class="btn-small">📈 Annuel</button>
             <button id="btn-toggle-envelopes" class="btn-small">✉️ Enveloppes</button>
-            <button id="btn-toggle-admin" class="btn-small" style="background:var(--secondary); border:none;">⚙️ Catégories & Objectifs</button>
+            <button id="btn-toggle-admin" class="btn-small" style="background:var(--text); color:white; border:none;">⚙️ Paramétrer Budget</button>
         </div>
 
-        <div id="admin-panel" class="card" style="display:none; margin-bottom:25px; border: 2px dashed var(--primary); background: rgba(74, 144, 226, 0.05);">
+        <div id="admin-panel" class="card" style="display:none; margin-bottom:30px; border: 2px dashed var(--primary); background: var(--bg);">
             <div class="layout-split">
                 <div>
-                    <h4 style="margin-top:0;">🎯 Objectifs d'épargne</h4>
-                    <form id="goal-form"><input type="text" id="goal-name" placeholder="Ex: Voyage" required><input type="number" id="goal-target" placeholder="Cible €" required><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button></form>
-                    <ul id="goal-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
+                    <h4 style="margin-top:0; font-size:1.2em; color:var(--text);">🎯 Objectifs d'épargne</h4>
+                    <p style="font-size:0.9em; opacity:0.7; font-weight:600; margin-top:-5px; margin-bottom:15px;">Pour vos projets à deux.</p>
+                    <form id="goal-form"><input type="text" id="goal-name" placeholder="Ex: Voyage Japon" required><input type="number" id="goal-target" placeholder="Cible en €" required><button type="submit" style="background:var(--primary); color:white;">+ Créer l'objectif</button></form>
+                    <ul id="goal-manage-list" style="list-style:none; padding:0; margin-top:20px;"></ul>
                 </div>
                 <div>
-                    <h4 style="margin-top:0;">📂 Catégories de budget</h4>
-                    <form id="category-form"><div style="display:flex; gap:8px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:55px; text-align:center;"><input type="text" id="new-cat-name" placeholder="Nom" required></div><input type="number" id="new-cat-limit" placeholder="Max € (Optionnel)"><button type="submit" style="background:var(--secondary); color:#333;">+ Ajouter</button></form>
-                    <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
+                    <h4 style="margin-top:0; font-size:1.2em; color:var(--text);">📂 Catégories d'Enveloppes</h4>
+                    <p style="font-size:0.9em; opacity:0.7; font-weight:600; margin-top:-5px; margin-bottom:15px;">Définissez vos limites de dépenses.</p>
+                    <form id="category-form"><div style="display:flex; gap:10px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:65px; text-align:center; font-size:1.2em;"><input type="text" id="new-cat-name" placeholder="Nom (Ex: Courses)" required></div><input type="number" id="new-cat-limit" placeholder="Limite Mensuelle € (Optionnel)"><button type="submit" style="background:var(--primary); color:white;">+ Ajouter la catégorie</button></form>
+                    <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:20px;"></ul>
                 </div>
             </div>
         </div>
 
-        <div id="annual-section" class="card" style="display:none; margin-bottom:25px;">
+        <div id="annual-section" class="card" style="display:none; margin-bottom:30px;">
             <h3 style="margin-top:0;">📈 Évolution Annuelle</h3>
-            <canvas id="annualChart" style="max-height:280px;"></canvas>
+            <div style="height:300px; width:100%; position:relative;"><canvas id="annualChart"></canvas></div>
         </div>
 
-        <div id="envelopes-section" class="card" style="display:none; margin-bottom:25px;">
-            <h3 style="margin-top:0;">✉️ Enveloppes</h3>
-            <div id="envelopes-section-content"></div>
+        <div id="envelopes-section" class="card" style="display:none; margin-bottom:30px;">
+            <h3 style="margin-top:0;">✉️ Suivi des Enveloppes Mensuelles</h3>
+            <div id="envelopes-section-content" style="margin-top:20px;"></div>
         </div>
 
         <div class="grid-stats">
             <div class="card">
                 <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
-                <div class="card-content"><span id="solde-actuel" class="balance">0.00 €</span><p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p></div>
+                <div class="card-content">
+                    <span id="solde-actuel" class="balance">0.00 €</span>
+                    <div style="font-size:0.95em; margin-top:10px; color:var(--text); font-weight:700; background:var(--bg); padding:10px 15px; border-radius:12px; display:inline-block;">Revenus : <span id="total-revenus" style="color:var(--success);">0€</span></div>
+                </div>
             </div>
             <div class="card">
-                <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
-                <div class="card-content"><span id="total-depenses" class="balance" style="color:#e74c3c">0.00 €</span></div>
+                <div class="card-header"><h3>📊 Dépenses</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-content">
+                    <span id="total-depenses" class="balance" style="color:var(--danger)">0.00 €</span>
+                </div>
             </div>
             <div class="card" style="text-align:center;">
                 <div class="card-header"><h3 style="text-align:left;">📈 Répartition</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
-                <div class="card-content"><canvas id="expenseChart" style="max-width:130px; margin:auto;"></canvas><div style="margin-top:12px; font-size:0.8em; color:#666;"><input type="checkbox" id="toggle-proportional"> Taux d'effort (proportionnel)</div><div id="proportional-container" style="display:none; text-align:left;"></div></div>
+                <div class="card-content">
+                    <div style="height:140px; width:140px; margin:auto; position:relative;"><canvas id="expenseChart"></canvas></div>
+                    <div style="margin-top:20px; font-size:0.9em; color:var(--text); font-weight:700; background:var(--bg); padding:10px; border-radius:12px; cursor:pointer;"><label style="cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;"><input type="checkbox" id="toggle-proportional"> Afficher le taux d'effort</label></div>
+                    <div id="proportional-container" style="display:none; text-align:left; margin-top:15px;"></div>
+                </div>
             </div>
         </div>
         
         <div id="goals-container" class="grid-stats"></div>
 
-        <div class="layout-split" style="margin-top:25px;">
+        <div class="layout-split" style="margin-top:30px;">
             <div class="card">
                 <div class="card-header"><h3 id="form-expense-title">➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
                 <div class="card-content">
@@ -554,19 +532,24 @@
                             <label class="radio-label"><input type="radio" name="trans-type" value="income"><span class="radio-btn">📈 Revenu</span></label>
                         </div>
                         <input type="date" id="expense-date" required>
-                        <input type="text" id="desc" placeholder="Description (Ex: Courses)" required><input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
-                        <select id="payer" required></select><select id="category" required></select>
+                        <input type="text" id="desc" placeholder="Quoi ? (Ex: Courses Super U)" required>
+                        <input type="number" id="amount" placeholder="Montant (€)" step="0.01" required>
+                        <select id="payer" required></select>
+                        <select id="category" required></select>
                         <div id="goal-selector-group" style="display:none;"><select id="goal-selector"></select></div>
-                        <button type="submit" id="btn-submit-expense">Enregistrer l'opération</button>
+                        <button type="submit" id="btn-submit-expense">Ajouter l'opération</button>
                     </form>
                 </div>
             </div>
             
             <div style="width: 100%;">
-                <div style="display:flex; gap:10px; margin-bottom:12px;"><input type="text" id="search-bar" placeholder="🔍 Rechercher une opération..." style="margin-top:0;"><button id="export-btn" class="btn-small" style="background:var(--secondary); color:#333; margin-top:0 !important;">📥 CSV</button></div>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px; align-items:center;">
+                    <input type="text" id="search-bar" placeholder="🔍 Rechercher une dépense..." style="margin:0; flex:1;">
+                    <button id="export-btn" class="btn-small" style="background:white; color:var(--text); margin:0 !important; font-weight:800;">📥 Excel CSV</button>
+                </div>
                 <div class="table-container">
                     <table>
-                        <thead style="background:rgba(0,0,0,0.02);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Prix</th><th>Action</th></tr></thead>
+                        <thead style="background:var(--bg);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Prix</th><th>Actions</th></tr></thead>
                         <tbody id="expense-list"></tbody>
                     </table>
                 </div>
@@ -578,7 +561,6 @@
 <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item active" id="bnav-dashboard"><span>📊</span> Accueil</a>
     <a class="bottom-nav-item" id="bnav-calendar"><span>📅</span> Calendrier</a>
-    <a class="bottom-nav-item" id="bnav-panda" style="display:none;"><span>🐼</span> Panda</a>
     <a class="bottom-nav-item" id="bnav-subs"><span>🔁</span> Frais</a>
     <a class="bottom-nav-item" id="bnav-profile"><span>👤</span> Profil</a>
 </nav>
