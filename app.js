@@ -64,7 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const todayTime = new Date().setHours(0,0,0,0); let upcoming = [];
         eventsData.forEach(ev => {
             if (ev.reminder > 0) {
-                const evTime = new Date(ev.date).setHours(0,0,0,0); const diffDays = (evTime - todayTime) / (1000 * 3600 * 24);
+                // Compatibilité : on se base sur la dateStart, ou la date unique (anciens événements)
+                const evTime = new Date(ev.dateStart || ev.date).setHours(0,0,0,0); 
+                const diffDays = (evTime - todayTime) / (1000 * 3600 * 24);
                 if (diffDays >= 0 && diffDays <= ev.reminder) upcoming.push({ ...ev, diffDays });
             }
         });
@@ -72,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const list = document.getElementById('reminder-list'); list.innerHTML = '';
             upcoming.forEach(ev => {
                 const dayText = ev.diffDays === 0 ? "<b>Aujourd'hui</b>" : `dans ${ev.diffDays} jour(s)`;
-                list.innerHTML += `<li style="margin-bottom:8px; padding:12px; background:rgba(0,0,0,0.03); border-radius:8px; border-left: 4px solid ${ev.important ? '#e74c3c' : 'var(--primary)'};"><strong style="font-size:1.1em;">${ev.title}</strong><br><span style="font-size:0.9em; color:#666;">Prévu ${dayText} (${new Date(ev.date).toLocaleDateString('fr-FR')})</span></li>`;
+                list.innerHTML += `<li style="margin-bottom:8px; padding:12px; background:rgba(0,0,0,0.03); border-radius:8px; border-left: 4px solid ${ev.important ? '#e74c3c' : 'var(--primary)'};"><strong style="font-size:1.1em;">${ev.title}</strong><br><span style="font-size:0.9em; color:#666;">Prévu ${dayText} (${new Date(ev.dateStart || ev.date).toLocaleDateString('fr-FR')})</span></li>`;
             });
             document.getElementById('reminder-popup').style.display = 'flex'; reminderPopupShown = true;
         }
@@ -99,11 +101,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateStrISO = `${calYear}-${String(calMonth+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             let cellHTML = `<div class="calendar-day ${dateStrFR === todayStr ? 'today' : ''}"><div class="day-num">${day}</div>`;
             
+            const currentCellTime = new Date(dateStrISO).getTime();
+
             eventsData.forEach(ev => { 
-                if (ev.date === dateStrISO) { 
-                    // Couleurs dynamiques basées sur le texte
+                // Vérifie si la date de la case est comprise entre le début et la fin de l'événement
+                const evStart = new Date(ev.dateStart || ev.date).getTime();
+                const evEnd = new Date(ev.dateEnd || ev.date).getTime();
+
+                if (currentCellTime >= evStart && currentCellTime <= evEnd) { 
+                    // Détection du mot clé 'pro' ou 'travail' pour changer la couleur
                     let badgeClass = 'badge-perso';
-                    if(ev.type.toLowerCase().includes('pro')) badgeClass = 'badge-pro';
+                    if(ev.type.toLowerCase().includes('pro') || ev.type.toLowerCase().includes('travail')) badgeClass = 'badge-pro';
                     
                     cellHTML += `<div class="badge ${badgeClass} ${ev.important ? 'badge-important' : ''} delete-ev" data-id="${ev.id}" title="${ev.type} - ${ev.title}">${ev.important ? '⚠️ ' : ''}${ev.title}</div>`; 
                 } 
@@ -113,10 +121,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 💡 Astuce UX: Auto-remplir la date de fin quand la date de début change
+    document.getElementById('ev-date-start')?.addEventListener('change', (e) => {
+        const endInput = document.getElementById('ev-date-end');
+        if (!endInput.value || new Date(endInput.value) < new Date(e.target.value)) {
+            endInput.value = e.target.value;
+        }
+    });
+
     document.getElementById('event-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); 
+        const dStart = document.getElementById('ev-date-start').value;
+        const dEnd = document.getElementById('ev-date-end').value;
+
+        // Sécurité : La fin ne peut pas être avant le début
+        if(new Date(dEnd) < new Date(dStart)) return alert("La date de fin ne peut pas être antérieure à la date de début.");
+
         await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), { 
-            date: document.getElementById('ev-date').value, 
+            dateStart: dStart, 
+            dateEnd: dEnd,
             title: document.getElementById('ev-title').value, 
             type: document.getElementById('ev-type').value, 
             important: document.getElementById('ev-important').checked, 

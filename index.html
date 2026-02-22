@@ -21,12 +21,16 @@
         body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
 
         /* --- DÉCORATIONS THÈMES PANDAS --- */
-        body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; background-size: cover; background-position: center; pointer-events: none; }
+        body::before { 
+            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; 
+            background-size: cover; background-position: center; pointer-events: none; 
+        }
         .sidebar-footer { position: relative; }
         .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
 
-        body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
-        body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
+        body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('fond-panda.jpg'); }
+        body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('icone-panda.png'); }
         body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
         body.theme-panda-roux .sidebar-footer::before { opacity: 1; background-image: url('icone-roux.png'); }
 
@@ -86,17 +90,15 @@
         .radio-label input[value="expense"]:checked + .radio-btn { background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c; }
         .radio-label input[value="income"]:checked + .radio-btn { background: rgba(46, 204, 113, 0.1); border-color: #2ecc71; color: #2ecc71; }
 
-        /* ⬇️ NOUVEAU : SWITCH TOGGLES (Boutons iOS) ⬇️ */
+        /* --- SWITCH TOGGLES (Boutons iOS) --- */
         .switch-container { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; flex-shrink: 0; }
-        .switch input { display: none; } /* Cache la case moche */
+        .switch input { display: none; }
         .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 34px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: var(--primary); }
         input:checked + .slider:before { transform: translateX(22px); }
-        /* Variante pour le toggle "Important" en rouge */
         .switch-important input:checked + .slider { background-color: #e74c3c; }
-        /* ⬆️ FIN NOUVEAU STYLE ⬆️ */
 
         .progress-bar { width: 100%; background: var(--border); border-radius: 10px; height: 12px; overflow: hidden; margin-top: 10px; }
         .progress-fill { height: 100%; transition: 0.6s ease; }
@@ -211,7 +213,6 @@
                     <h3 id="cal-month-display" style="margin:0;">---</h3>
                     <button id="cal-next" class="btn-small">Suiv. ➡️</button>
                 </div>
-                
                 <div style="margin-bottom:15px; background:var(--bg); padding:12px; border-radius:8px;">
                     <label class="switch-container">
                         <div class="switch">
@@ -221,7 +222,6 @@
                         <span style="font-size: 0.95em; font-weight: 500;">💰 Afficher les transactions</span>
                     </label>
                 </div>
-
                 <div class="calendar-header-days"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
@@ -229,18 +229,21 @@
             <div class="card">
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
-                    <input type="date" id="ev-date" required>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:8px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.8em; font-weight:bold; color:var(--text); opacity:0.8;">Du :</label>
+                            <input type="date" id="ev-date-start" required style="margin-top:2px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.8em; font-weight:bold; color:var(--text); opacity:0.8;">Au :</label>
+                            <input type="date" id="ev-date-end" required style="margin-top:2px;">
+                        </div>
+                    </div>
+
                     <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste)" required>
                     
-                    <input type="text" id="ev-type" placeholder="Catégorie (Libre ou Choix)" list="default-event-types" required>
-                    <datalist id="default-event-types">
-                        <option value="👤 Personnel"></option>
-                        <option value="💼 Professionnel"></option>
-                        <option value="🎉 Fête / Anniversaire"></option>
-                        <option value="🏥 Santé / RDV"></option>
-                        <option value="✈️ Vacances"></option>
-                        <option value="🛒 Courses / Achats"></option>
-                    </datalist>
+                    <input type="text" id="ev-type" placeholder="Catégorie (Libre. Ex: Vacances, Pro...)" required>
 
                     <div style="margin:15px 0; background:rgba(231, 76, 60, 0.05); border: 1px solid rgba(231, 76, 60, 0.2); padding:12px; border-radius:8px;">
                         <label class="switch-container" style="color:#e74c3c; font-weight:bold;">
@@ -355,14 +358,8 @@
                 <div class="card-content">
                     <form id="expense-form">
                         <div class="transaction-type-toggle">
-                            <label class="radio-label">
-                                <input type="radio" name="trans-type" value="expense" checked>
-                                <span class="radio-btn">📉 Dépense</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="trans-type" value="income">
-                                <span class="radio-btn">📈 Revenu</span>
-                            </label>
+                            <label class="radio-label"><input type="radio" name="trans-type" value="expense" checked><span class="radio-btn">📉 Dépense</span></label>
+                            <label class="radio-label"><input type="radio" name="trans-type" value="income"><span class="radio-btn">📈 Revenu</span></label>
                         </div>
                         <input type="text" id="desc" placeholder="Description (Ex: Courses)" required><input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
                         <select id="payer" required></select><select id="category" required></select>
