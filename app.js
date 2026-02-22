@@ -98,13 +98,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateStrFR = `${String(day).padStart(2, '0')}/${String(calMonth+1).padStart(2, '0')}/${calYear}`;
             const dateStrISO = `${calYear}-${String(calMonth+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             let cellHTML = `<div class="calendar-day ${dateStrFR === todayStr ? 'today' : ''}"><div class="day-num">${day}</div>`;
-            eventsData.forEach(ev => { if (ev.date === dateStrISO) { cellHTML += `<div class="badge ${ev.type === 'pro' ? 'badge-pro' : 'badge-perso'} ${ev.important ? 'badge-important' : ''} delete-ev" data-id="${ev.id}" title="${ev.title}">${ev.important ? '⚠️ ' : ''}${ev.title}</div>`; } });
+            
+            eventsData.forEach(ev => { 
+                if (ev.date === dateStrISO) { 
+                    // Couleurs dynamiques basées sur le texte
+                    let badgeClass = 'badge-perso';
+                    if(ev.type.toLowerCase().includes('pro')) badgeClass = 'badge-pro';
+                    
+                    cellHTML += `<div class="badge ${badgeClass} ${ev.important ? 'badge-important' : ''} delete-ev" data-id="${ev.id}" title="${ev.type} - ${ev.title}">${ev.important ? '⚠️ ' : ''}${ev.title}</div>`; 
+                } 
+            });
             if (showExpenses) { expenses.forEach(ex => { if (ex.date === dateStrFR) { cellHTML += `<div class="badge ${ex.type === 'income' ? 'badge-inc' : 'badge-exp'}" title="${ex.desc} (${ex.amount}€)">${ex.type === 'income' ? '+' : '-'}${ex.amount}€ <small>${ex.desc.substring(0,8)}</small></div>`; } }); }
             cellHTML += `</div>`; grid.innerHTML += cellHTML;
         }
     }
 
-    document.getElementById('event-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), { date: document.getElementById('ev-date').value, title: document.getElementById('ev-title').value, type: document.getElementById('ev-type').value, important: document.getElementById('ev-important').checked, reminder: parseInt(document.getElementById('ev-reminder').value) }); e.target.reset(); alert("Événement ajouté !"); });
+    document.getElementById('event-form')?.addEventListener('submit', async (e) => { 
+        e.preventDefault(); 
+        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), { 
+            date: document.getElementById('ev-date').value, 
+            title: document.getElementById('ev-title').value, 
+            type: document.getElementById('ev-type').value, 
+            important: document.getElementById('ev-important').checked, 
+            reminder: parseInt(document.getElementById('ev-reminder').value) 
+        }); 
+        e.target.reset(); alert("Événement ajouté au calendrier !"); 
+    });
 
     // --- BOUTONS DASHBOARD BARRE D'ACTIONS ---
     document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => { showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'block' : 'none'; e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)'; updateUI(); });
@@ -186,20 +205,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // NOUVEAU : Barre de recherche Utilisateurs Admin
     document.getElementById('search-admin-users')?.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#admin-user-list tr').forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-        });
+        document.querySelectorAll('#admin-user-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; });
     });
 
-    // NOUVEAU : Barre de recherche Foyers Admin
     document.getElementById('search-admin-budgets')?.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#admin-budget-list tr').forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-        });
+        document.querySelectorAll('#admin-budget-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; });
     });
 
     // --- AUTHENTIFICATION ---
