@@ -22,7 +22,7 @@ const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2";
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 🛠️ SYSTÈME DE POP-UP PERSONNALISÉ (Remplacement de alert et confirm) ---
+    // --- 🛠️ SYSTÈME DE POP-UP PERSONNALISÉ ---
     function customAlert(message, title = "Information") {
         return new Promise((resolve) => {
             const overlay = document.getElementById('custom-dialog-overlay');
@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const btnContainer = document.getElementById('custom-dialog-btns');
             btnContainer.innerHTML = '<button id="btn-dialog-ok" style="width:auto; padding:10px 25px;">OK</button>';
             overlay.style.display = 'flex';
-            
             document.getElementById('btn-dialog-ok').onclick = () => { overlay.style.display = 'none'; resolve(); };
         });
     }
@@ -42,17 +41,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('custom-dialog-title').innerText = title;
             document.getElementById('custom-dialog-msg').innerHTML = message;
             const btnContainer = document.getElementById('custom-dialog-btns');
-            btnContainer.innerHTML = `
-                <button id="btn-dialog-cancel" class="btn-small" style="background:var(--card-bg); color:var(--text);">Annuler</button>
-                <button id="btn-dialog-confirm" style="width:auto; padding:10px 25px; background:#e74c3c;">Confirmer</button>
-            `;
+            btnContainer.innerHTML = `<button id="btn-dialog-cancel" class="btn-small" style="background:var(--card-bg); color:var(--text);">Annuler</button><button id="btn-dialog-confirm" style="width:auto; padding:10px 25px; background:#e74c3c;">Confirmer</button>`;
             overlay.style.display = 'flex';
-            
             document.getElementById('btn-dialog-cancel').onclick = () => { overlay.style.display = 'none'; resolve(false); };
             document.getElementById('btn-dialog-confirm').onclick = () => { overlay.style.display = 'none'; resolve(true); };
         });
     }
 
+    // Initialisation des dates (Aujourd'hui par défaut)
+    const todayISO = new Date().toISOString().split('T')[0];
+    if(document.getElementById('expense-date')) document.getElementById('expense-date').value = todayISO;
+    if(document.getElementById('quick-date')) document.getElementById('quick-date').value = todayISO;
 
     // --- ÉLÉMENTS UI ---
     const sidebar = document.getElementById('sidebar');
@@ -70,9 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
     const viewSubs = document.getElementById('view-subscriptions');
-    const navItems = document.querySelectorAll('.nav-item');
 
-    // --- ÉTATS GLOBAUX ---
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
     let isDataLoaded = false;
@@ -104,41 +101,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 🛡️ GESTION DU MODE MAINTENANCE ---
     onSnapshot(doc(db, "settings", "system"), (d) => {
         if(d.exists()) {
             const data = d.data();
             isMaintenance = data.maintenance === true;
             const toggle = document.getElementById('admin-maintenance-toggle'); if(toggle) toggle.checked = isMaintenance;
-            
             const banner = document.getElementById('global-announcement');
             if(data.announcement && data.announcement.trim() !== "") { banner.innerText = data.announcement; banner.style.display = 'block'; } 
             else { banner.style.display = 'none'; }
-            
             renderAppState(); 
         }
     });
 
-    document.getElementById('admin-maintenance-toggle')?.addEventListener('change', async (e) => {
-        if(auth.currentUser.uid !== ADMIN_UID) return;
-        await setDoc(doc(db, "settings", "system"), { maintenance: e.target.checked }, { merge: true });
-    });
-    
-    document.getElementById('btn-admin-announce')?.addEventListener('click', async () => {
-        if(auth.currentUser.uid !== ADMIN_UID) return;
-        const msg = document.getElementById('admin-announcement-input').value;
-        await setDoc(doc(db, "settings", "system"), { announcement: msg }, { merge: true });
-        customAlert(msg === "" ? "Annonce retirée." : "Annonce publiée à tous les utilisateurs !", "Annonce");
-    });
-
+    document.getElementById('admin-maintenance-toggle')?.addEventListener('change', async (e) => { if(auth.currentUser.uid !== ADMIN_UID) return; await setDoc(doc(db, "settings", "system"), { maintenance: e.target.checked }, { merge: true }); });
+    document.getElementById('btn-admin-announce')?.addEventListener('click', async () => { if(auth.currentUser.uid !== ADMIN_UID) return; const msg = document.getElementById('admin-announcement-input').value; await setDoc(doc(db, "settings", "system"), { announcement: msg }, { merge: true }); customAlert(msg === "" ? "Annonce retirée." : "Annonce publiée à tous les utilisateurs !", "Annonce"); });
     document.getElementById('btn-admin-bypass')?.addEventListener('click', () => { screenMaintenance.style.display = 'none'; screenAuth.style.display = 'flex'; });
 
     // --- 👤 AUTHENTIFICATION ---
-    onAuthStateChanged(auth, async (user) => {
-        currentUserObj = user;
-        if (user) { await updateDoc(doc(db, "users", user.uid), { lastLogin: Date.now() }).catch(e=>{}); }
-        renderAppState();
-    });
+    onAuthStateChanged(auth, async (user) => { currentUserObj = user; if (user) { await updateDoc(doc(db, "users", user.uid), { lastLogin: Date.now() }).catch(e=>{}); } renderAppState(); });
 
     async function renderAppState() {
         if (isMaintenance && (!currentUserObj || currentUserObj.uid !== ADMIN_UID)) {
@@ -159,60 +139,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- OEIL MOT DE PASSE ET MOT DE PASSE OUBLIÉ ---
-    document.getElementById('toggle-password')?.addEventListener('click', (e) => {
-        const pwdInput = document.getElementById('auth-password');
-        if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } 
-        else { pwdInput.type = 'password'; e.target.innerText = '👁️'; }
-    });
+    document.getElementById('toggle-password')?.addEventListener('click', (e) => { const pwdInput = document.getElementById('auth-password'); if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } else { pwdInput.type = 'password'; e.target.innerText = '👁️'; } });
+    document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
+    document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now() }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
 
-    document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => {
-        const email = document.getElementById('auth-email').value;
-        if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !");
-        try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } 
-        catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); }
-    });
-
-    document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion";
-        try {
-            if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } 
-            else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now() }); }
-        } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; }
-    });
-
-    // --- NAVIGATION ---
-    function hideAllViews() { viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; }
-    function handleMobileSidebar() { if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); if (mobileOverlay) mobileOverlay.classList.remove('active'); } }
-    function setActiveNav(targetId) { navItems.forEach(item => item.classList.remove('active')); document.getElementById(targetId)?.classList.add('active'); handleMobileSidebar(); }
+    // --- NAVIGATION (SYNCRO PC ET MOBILE) ---
+    function switchView(viewElement, navId, bnavId) {
+        viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none';
+        document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
+        
+        viewElement.style.display = 'block';
+        if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
+        if(document.getElementById(bnavId)) document.getElementById(bnavId).classList.add('active');
+        
+        window.scrollTo(0,0);
+        if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); if (mobileOverlay) mobileOverlay.classList.remove('active'); }
+    }
 
     toggleBtn?.addEventListener('click', () => { if (window.innerWidth <= 850) { sidebar.classList.toggle('mobile-open'); if (mobileOverlay) mobileOverlay.classList.toggle('active'); } else { sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded'); } });
-    mobileOverlay?.addEventListener('click', handleMobileSidebar);
+    mobileOverlay?.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); });
 
-    document.getElementById('nav-dashboard')?.addEventListener('click', () => { hideAllViews(); viewDashboard.style.display = 'block'; setActiveNav('nav-dashboard'); window.scrollTo(0,0); document.getElementById('fab-quick-add').style.display='flex'; });
-    document.getElementById('nav-profile')?.addEventListener('click', () => { hideAllViews(); viewProfile.style.display = 'block'; setActiveNav('nav-profile'); window.scrollTo(0,0); document.getElementById('fab-quick-add').style.display='none';});
-    document.getElementById('nav-calendar')?.addEventListener('click', () => { hideAllViews(); viewCalendar.style.display = 'block'; setActiveNav('nav-calendar'); window.scrollTo(0,0); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
-    document.getElementById('nav-subs')?.addEventListener('click', () => { hideAllViews(); viewSubs.style.display = 'block'; setActiveNav('nav-subs'); window.scrollTo(0,0); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
-    document.getElementById('nav-admin')?.addEventListener('click', () => { hideAllViews(); viewAdmin.style.display = 'block'; setActiveNav('nav-admin'); window.scrollTo(0,0); document.getElementById('fab-quick-add').style.display='none'; loadAdminData(); });
+    // Boutons Sidebar
+    document.getElementById('nav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-quick-add').style.display='flex'; });
+    document.getElementById('nav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-quick-add').style.display='none';});
+    document.getElementById('nav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
+    document.getElementById('nav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
+    document.getElementById('nav-admin')?.addEventListener('click', () => { switchView(viewAdmin, 'nav-admin', null); document.getElementById('fab-quick-add').style.display='none'; loadAdminData(); });
+
+    // Boutons Barre Mobile
+    document.getElementById('bnav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-quick-add').style.display='flex'; });
+    document.getElementById('bnav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-quick-add').style.display='none';});
+    document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
+    document.getElementById('bnav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
 
     // --- FEEDBACK & QUICK ADD MODALS ---
-    document.getElementById('btn-open-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; handleMobileSidebar(); });
+    document.getElementById('btn-open-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); } });
     document.getElementById('btn-close-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'none'; });
-    document.getElementById('feedback-form')?.addEventListener('submit', async(e) => {
-        e.preventDefault();
-        await addDoc(collection(db, "feedbacks"), { text: document.getElementById('feedback-text').value, user: auth.currentUser.email, date: Date.now() });
-        document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; customAlert("Merci pour votre retour !", "Message envoyé");
-    });
+    document.getElementById('feedback-form')?.addEventListener('submit', async(e) => { e.preventDefault(); await addDoc(collection(db, "feedbacks"), { text: document.getElementById('feedback-text').value, user: auth.currentUser.email, date: Date.now() }); document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; customAlert("Merci pour votre retour !", "Message envoyé"); });
 
-    document.getElementById('fab-quick-add')?.addEventListener('click', () => { document.getElementById('modal-quick-add').style.display = 'flex'; });
+    document.getElementById('fab-quick-add')?.addEventListener('click', () => { 
+        document.getElementById('quick-date').value = new Date().toISOString().split('T')[0]; // Reset date to today
+        document.getElementById('modal-quick-add').style.display = 'flex'; 
+    });
     document.getElementById('btn-close-quick-add')?.addEventListener('click', () => { document.getElementById('modal-quick-add').style.display = 'none'; });
     
     function fireConfetti() {
         const colors = ['#4A90E2', '#50E3C2', '#FDCB6E', '#FF6B6B', '#A29BFE'];
         for(let i=0; i<50; i++) {
             const conf = document.createElement('div');
-            conf.style.position = 'fixed'; conf.style.zIndex = '9999';
-            conf.style.width = '10px'; conf.style.height = '10px';
+            conf.style.position = 'fixed'; conf.style.zIndex = '9999'; conf.style.width = '10px'; conf.style.height = '10px';
             conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
             conf.style.left = Math.random() * 100 + 'vw'; conf.style.top = '-10px';
             conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
@@ -224,20 +199,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CALENDRIER LOGIQUE ---
     function checkReminders() {
-        if(reminderPopupShown) return;
-        const todayTime = new Date().setHours(0,0,0,0); let upcoming = [];
-        eventsData.forEach(ev => {
-            if (ev.reminder > 0) {
-                const evTime = new Date(ev.dateStart || ev.date).setHours(0,0,0,0); const diffDays = (evTime - todayTime) / (1000 * 3600 * 24);
-                if (diffDays >= 0 && diffDays <= ev.reminder) upcoming.push({ ...ev, diffDays });
-            }
-        });
+        if(reminderPopupShown) return; const todayTime = new Date().setHours(0,0,0,0); let upcoming = [];
+        eventsData.forEach(ev => { if (ev.reminder > 0) { const evTime = new Date(ev.dateStart || ev.date).setHours(0,0,0,0); const diffDays = (evTime - todayTime) / (1000 * 3600 * 24); if (diffDays >= 0 && diffDays <= ev.reminder) upcoming.push({ ...ev, diffDays }); } });
         if (upcoming.length > 0) {
             const list = document.getElementById('reminder-list'); list.innerHTML = '';
-            upcoming.forEach(ev => {
-                const dayText = ev.diffDays === 0 ? "<b>Aujourd'hui</b>" : `dans ${ev.diffDays} jour(s)`;
-                list.innerHTML += `<li style="margin-bottom:8px; padding:12px; background:rgba(0,0,0,0.03); border-radius:8px; border-left: 4px solid ${ev.important ? '#e74c3c' : 'var(--primary)'};"><strong style="font-size:1.1em;">${ev.title}</strong><br><span style="font-size:0.9em; color:#666;">Prévu ${dayText} (${new Date(ev.dateStart || ev.date).toLocaleDateString('fr-FR')})</span></li>`;
-            });
+            upcoming.forEach(ev => { const dayText = ev.diffDays === 0 ? "<b>Aujourd'hui</b>" : `dans ${ev.diffDays} jour(s)`; list.innerHTML += `<li style="margin-bottom:8px; padding:12px; background:rgba(0,0,0,0.03); border-radius:8px; border-left: 4px solid ${ev.important ? '#e74c3c' : 'var(--primary)'};"><strong style="font-size:1.1em;">${ev.title}</strong><br><span style="font-size:0.9em; color:#666;">Prévu ${dayText} (${new Date(ev.dateStart || ev.date).toLocaleDateString('fr-FR')})</span></li>`; });
             document.getElementById('reminder-popup').style.display = 'flex'; reminderPopupShown = true;
         }
     }
@@ -259,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateStrFR = `${String(day).padStart(2, '0')}/${String(calMonth+1).padStart(2, '0')}/${calYear}`;
             const dateStrISO = `${calYear}-${String(calMonth+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             let cellHTML = `<div class="calendar-day ${dateStrFR === todayStr ? 'today' : ''}"><div class="day-num">${day}</div>`;
-            
             const currentCellTime = new Date(dateStrISO).getTime();
             eventsData.forEach(ev => { 
                 const evStart = new Date(ev.dateStart || ev.date).getTime(); const evEnd = new Date(ev.dateEnd || ev.date).getTime();
@@ -293,12 +258,28 @@ document.addEventListener('DOMContentLoaded', () => {
         list.innerHTML = ""; const m = parseInt(document.getElementById('filter-month').value); const y = parseInt(document.getElementById('filter-year').value);
         let rev = 0, dep = 0, catSums = {}; let memberStats = {}; members.forEach(mbr => memberStats[mbr.id] = { name: mbr.name, rev: 0, dep: 0 });
 
-        expenses.filter(e => { return new Date(e.timestamp).getMonth() === m && new Date(e.timestamp).getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch)); }).forEach(e => {
-            const isInc = e.type === 'income'; let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
-            if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
-            if(isInc) { rev += e.amount; memberStats[currentPayerId].rev += e.amount; } else { dep += e.amount; memberStats[currentPayerId].dep += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
-            const tr = document.createElement('tr'); tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small>${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'#2ecc71':'#e74c3c'}; font-weight:bold;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td><td style="white-space:nowrap;"><button class="edit-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;">✏️</button><button class="delete-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;">🗑️</button></td>`; list.appendChild(tr);
-        });
+        const filteredExpenses = expenses.filter(e => { return new Date(e.timestamp).getMonth() === m && new Date(e.timestamp).getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch)); });
+
+        // 📭 ÉTAT VIDE DU TABLEAU
+        if(filteredExpenses.length === 0) {
+            list.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text); opacity:0.6; font-size:1.1em;">📭 Aucune opération pour cette période. Quel calme !</td></tr>`;
+        } else {
+            // REMPLISSAGE NORMAL
+            filteredExpenses.forEach(e => {
+                const isInc = e.type === 'income'; let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
+                if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
+                if(isInc) { rev += e.amount; memberStats[currentPayerId].rev += e.amount; } else { dep += e.amount; memberStats[currentPayerId].dep += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
+                const tr = document.createElement('tr'); 
+                // BOUTON DUPLIQUER 📋 AJOUTÉ
+                tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small>${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'#2ecc71':'#e74c3c'}; font-weight:bold;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
+                <td style="white-space:nowrap;">
+                    <button class="duplicate-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;" title="Dupliquer">📋</button>
+                    <button class="edit-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;" title="Modifier">✏️</button>
+                    <button class="delete-exp btn-small" data-id="${e.id}" style="padding:5px; border:none; background:none;" title="Supprimer">🗑️</button>
+                </td>`; 
+                list.appendChild(tr);
+            });
+        }
 
         document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €'; document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
         document.getElementById('solde-actuel').innerText = (rev - dep).toFixed(2) + ' €'; document.getElementById('solde-actuel').style.color = (rev - dep) >= 0 ? '#2ecc71' : '#e74c3c';
@@ -322,8 +303,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAnnualChart() { const ctx = document.getElementById('annualChart')?.getContext('2d'); if(!ctx) return; const monthlyData = new Array(12).fill(0).map(() => ({ inc: 0, exp: 0 })); expenses.filter(e => new Date(e.timestamp).getFullYear() === parseInt(document.getElementById('filter-year').value)).forEach(e => { const m = new Date(e.timestamp).getMonth(); if(e.type === 'income') monthlyData[m].inc += e.amount; else monthlyData[m].exp += e.amount; }); if(myAnnualChart) myAnnualChart.destroy(); myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: '#2ecc71' }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: '#e74c3c' }] }, options: { responsive: true, maintainAspectRatio: false } }); }
 
     // --- FRAIS FIXES ---
-    document.getElementById('sub-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), { name: document.getElementById('sub-name').value, amount: parseFloat(document.getElementById('sub-amount').value), category: document.getElementById('sub-category').value, day: parseInt(document.getElementById('sub-day').value) }); e.target.reset(); customAlert("Frais fixe enregistré !"); });
-    function renderSubs() { const list = document.getElementById('subs-list'); const totLabel = document.getElementById('total-subs-amount'); if(!list || !totLabel) return; list.innerHTML = ""; let total = 0; subsData.sort((a,b) => a.day - b.day).forEach(sub => { total += sub.amount; const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(0,0,0,0.02); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;"; li.innerHTML = `<div style="flex:1;"><strong>${sub.name}</strong><br><small style="color:#666;">Le ${sub.day} du mois - ${sub.category}</small></div><div style="font-weight:bold; color:#e74c3c; margin-right:15px;">-${sub.amount.toFixed(2)}€</div><button class="pay-sub btn-small" data-name="${sub.name}" data-amount="${sub.amount}" data-cat="${sub.category}" style="background:#2ecc71; color:white; padding:5px 10px; border:none; margin-right:5px !important;">Payer</button><button class="delete-sub btn-small" data-id="${sub.id}" style="background:#e74c3c; color:white; padding:5px 10px; border:none;">✕</button>`; list.appendChild(li); }); totLabel.innerText = total.toFixed(2) + " €"; }
+    document.getElementById('sub-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), { name: document.getElementById('sub-name').value, amount: parseFloat(document.getElementById('sub-amount').value), category: document.getElementById('sub-category').value, day: parseInt(document.getElementById('sub-day').value) }); e.target.reset(); customAlert("Frais fixe enregistré !", "Succès"); });
+    
+    function renderSubs() { 
+        const list = document.getElementById('subs-list'); const totLabel = document.getElementById('total-subs-amount'); if(!list || !totLabel) return; 
+        list.innerHTML = ""; let total = 0; 
+        if(subsData.length === 0) { list.innerHTML = '<li style="text-align:center; padding:15px; color:#888; font-style:italic;">📭 Aucun frais fixe configuré.</li>'; totLabel.innerText = "0.00 €"; return; }
+        
+        subsData.sort((a,b) => a.day - b.day).forEach(sub => { 
+            total += sub.amount; const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(0,0,0,0.02); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;"; 
+            li.innerHTML = `<div style="flex:1;"><strong>${sub.name}</strong><br><small style="color:#666;">Le ${sub.day} du mois - ${sub.category}</small></div><div style="font-weight:bold; color:#e74c3c; margin-right:15px;">-${sub.amount.toFixed(2)}€</div><button class="pay-sub btn-small" data-name="${sub.name}" data-amount="${sub.amount}" data-cat="${sub.category}" style="background:#2ecc71; color:white; padding:5px 10px; border:none; margin-right:5px !important;">Payer</button><button class="delete-sub btn-small" data-id="${sub.id}" style="background:#e74c3c; color:white; padding:5px 10px; border:none;">✕</button>`; 
+            list.appendChild(li); 
+        }); 
+        totLabel.innerText = total.toFixed(2) + " €"; 
+    }
 
     // --- CHARGEMENT DATA FIREBASE ---
     function loadBudgetData() {
@@ -355,12 +348,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('search-admin-budgets')?.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); document.querySelectorAll('#admin-budget-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; }); });
 
     // --- SETUP & PROFIL ---
-    document.getElementById('btn-create-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const code = Math.random().toString(36).substring(2, 8).toUpperCase(); const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid }); await setDoc(doc(db, "budgets", ref.id, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: ref.id }, { merge: true }); window.location.reload(); });
+    document.getElementById('btn-create-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom.", "Oups"); const code = Math.random().toString(36).substring(2, 8).toUpperCase(); const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid }); await setDoc(doc(db, "budgets", ref.id, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: ref.id }, { merge: true }); window.location.reload(); });
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable !", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- FORMULAIRES DE DÉPENSES ---
-    async function saveExpense(type, amount, cat, desc) {
+    // --- FORMULAIRES DE DÉPENSES (AVEC LOGIQUE DE DATE) ---
+    async function saveExpense(type, amount, cat, desc, dateVal) {
         if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
             const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
             if(targetGoal) {
@@ -368,31 +361,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
             }
         } 
+        
+        // Convertit YYYY-MM-DD en Timestamp (Midi pour éviter les bugs de fuseau horaire) et en format FR
+        const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
+        const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
+
         if(editingExpenseId) {
-            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), { desc: desc, amount: amount, category: cat, type: type, payerId: document.getElementById('payer').value });
+            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), { desc: desc, amount: amount, category: cat, type: type, payerId: document.getElementById('payer').value, date: frDate, timestamp: ts });
             editingExpenseId = null; 
             const btnSubmit = document.getElementById('btn-submit-expense'); if(btnSubmit) { btnSubmit.innerText = "Enregistrer l'opération"; btnSubmit.style.background = "var(--primary)"; }
             document.getElementById('form-expense-title').innerText = "➕ Nouvelle Opération";
         } else {
-            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), { date: new Date().toLocaleDateString('fr-FR'), timestamp: Date.now(), desc: desc, amount: amount, payerId: document.getElementById('payer').value, category: cat, type: type }); 
+            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type }); 
         }
     }
 
-    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value); e.target.reset(); document.getElementById('payer').value = auth.currentUser.uid; });
-    document.getElementById('quick-expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="quick-trans-type"]:checked').value, parseFloat(document.getElementById('quick-amount').value), document.getElementById('quick-category').value, document.getElementById('quick-desc').value); e.target.reset(); document.getElementById('modal-quick-add').style.display = 'none'; });
+    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value, document.getElementById('expense-date').value); e.target.reset(); document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; document.getElementById('payer').value = auth.currentUser.uid; });
+    document.getElementById('quick-expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="quick-trans-type"]:checked').value, parseFloat(document.getElementById('quick-amount').value), document.getElementById('quick-category').value, document.getElementById('quick-desc').value, document.getElementById('quick-date').value); e.target.reset(); document.getElementById('modal-quick-add').style.display = 'none'; });
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
-    // --- GESTION DES CLICS MULTIPLES AVEC CUSTOM CONFIRM ---
+    // --- GESTION DES CLICS MULTIPLES (ÉDITION & DUPLICATION) ---
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
         
+        // ✏️ ÉDITER
         if(e.target.classList.contains('edit-exp')) {
             const expId = e.target.dataset.id; const expToEdit = expenses.find(x => x.id === expId);
             if(expToEdit) {
                 editingExpenseId = expId; document.getElementById('desc').value = expToEdit.desc; document.getElementById('amount').value = expToEdit.amount; document.getElementById('category').value = expToEdit.category; document.getElementById('payer').value = expToEdit.payerId; document.querySelector(`input[name="trans-type"][value="${expToEdit.type}"]`).checked = true;
+                if(expToEdit.timestamp) { document.getElementById('expense-date').value = new Date(expToEdit.timestamp).toISOString().split('T')[0]; }
                 const btnSubmit = document.getElementById('btn-submit-expense'); if(btnSubmit) { btnSubmit.innerText = "💾 Enregistrer la modification"; btnSubmit.style.background = "#f39c12"; }
                 document.getElementById('form-expense-title').innerText = "✏️ Modifier l'opération"; document.getElementById('expense-form').scrollIntoView({behavior: "smooth"});
+            }
+        }
+        
+        // 📋 DUPLIQUER (Ouvre la saisie rapide)
+        if(e.target.classList.contains('duplicate-exp')) {
+            const expId = e.target.dataset.id; const expToDup = expenses.find(x => x.id === expId);
+            if(expToDup) {
+                document.getElementById('quick-desc').value = expToDup.desc;
+                document.getElementById('quick-amount').value = expToDup.amount;
+                document.getElementById('quick-category').value = expToDup.category;
+                document.querySelector(`input[name="quick-trans-type"][value="${expToDup.type}"]`).checked = true;
+                document.getElementById('quick-date').value = new Date().toISOString().split('T')[0]; // Par défaut aujourd'hui
+                document.getElementById('modal-quick-add').style.display = 'flex';
             }
         }
 
@@ -404,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if(e.target.classList.contains('pay-sub')) { 
             const amt = parseFloat(e.target.dataset.amount); const nom = e.target.dataset.name; const cat = e.target.dataset.cat;
-            if(await customConfirm(`Ajouter ${amt}€ dans les dépenses pour : ${nom} ?`, "Payer l'abonnement")) { await saveExpense('expense', amt, cat, nom); customAlert("Abonnement payé et ajouté aux dépenses !"); }
+            if(await customConfirm(`Ajouter ${amt}€ dans les dépenses pour : ${nom} ?`, "Payer l'abonnement")) { await saveExpense('expense', amt, cat, nom, new Date().toISOString().split('T')[0]); customAlert("Abonnement payé et ajouté aux dépenses !"); }
         }
 
         if(e.target.classList.contains('delete-user-data')) { if(await customConfirm("Purger les données de cet utilisateur ?", "Danger")) { await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null }); customAlert("Utilisateur purgé."); loadAdminData(); } }
