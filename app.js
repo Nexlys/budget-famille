@@ -13,6 +13,7 @@ const firebaseConfig = {
   measurementId: "G-DJMM6FLJZN"
 };
 
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -21,11 +22,13 @@ const auth = getAuth(app);
 const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2"; 
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- ÉLÉMENTS UI ---
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
     const toggleBtn = document.getElementById('toggle-sidebar');
     const mobileOverlay = document.getElementById('mobile-overlay');
     
+    const screenMaintenance = document.getElementById('screen-maintenance');
     const screenAuth = document.getElementById('screen-auth');
     const screenSetup = document.getElementById('screen-setup');
     const screenApp = document.getElementById('screen-app');
@@ -36,13 +39,83 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewAdmin = document.getElementById('view-admin');
     const navItems = document.querySelectorAll('.nav-item');
 
+    // --- ÉTATS GLOBAUX ---
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
+    let isDataLoaded = false;
     let goals = [], expenses = [], customCategories = [], members = [], eventsData = [];
     let myChart = null, myAnnualChart = null, currentSearch = "", showAnnual = false, showEnvelopes = false;
     let calMonth = new Date().getMonth();
     let calYear = new Date().getFullYear();
     let reminderPopupShown = false;
+    
+    let isMaintenance = false;
+    let currentUserObj = null;
+
+    // --- 🛡️ GESTION DU MODE MAINTENANCE (TEMPS RÉEL) ---
+    onSnapshot(doc(db, "settings", "system"), (d) => {
+        isMaintenance = d.exists() ? (d.data().maintenance === true) : false;
+        const toggle = document.getElementById('admin-maintenance-toggle');
+        if(toggle) toggle.checked = isMaintenance;
+        renderAppState(); // Force la vérification visuelle immédiate
+    });
+
+    document.getElementById('admin-maintenance-toggle')?.addEventListener('change', async (e) => {
+        if(auth.currentUser.uid !== ADMIN_UID) return;
+        await setDoc(doc(db, "settings", "system"), { maintenance: e.target.checked }, { merge: true });
+    });
+
+    // --- 👤 ÉTAT DE L'AUTHENTIFICATION ---
+    onAuthStateChanged(auth, async (user) => {
+        currentUserObj = user;
+        renderAppState();
+    });
+
+    // 🚦 FONCTION MAITRESSE DE ROUTAGE DE L'ÉCRAN
+    async function renderAppState() {
+        // 1. SI LA MAINTENANCE EST ACTIVE ET QUE CE N'EST PAS L'ADMIN : ON BLOQUE TOUT !
+        if (isMaintenance && (!currentUserObj || currentUserObj.uid !== ADMIN_UID)) {
+            screenMaintenance.style.display = 'flex';
+            screenAuth.style.display = 'none';
+            screenSetup.style.display = 'none';
+            screenApp.style.display = 'none';
+            if (currentUserObj) {
+                await signOut(auth); // Expulsion
+            }
+            return; // On arrête tout ici
+        }
+
+        // Sinon, on cache la maintenance
+        screenMaintenance.style.display = 'none';
+
+        // 2. FLUX NORMAL
+        if (currentUserObj) {
+            if(currentUserObj.uid === ADMIN_UID) document.getElementById('nav-admin').style.display = 'flex';
+            
+            if (!isDataLoaded) { // On ne charge la Data qu'une fois pour éviter les boucles
+                const userDoc = await getDoc(doc(db, "users", currentUserObj.uid));
+                if (userDoc.exists() && userDoc.data().budgetId) { 
+                    CURRENT_BUDGET_ID = userDoc.data().budgetId; 
+                    screenAuth.style.display = 'none'; 
+                    screenSetup.style.display = 'none';
+                    loadBudgetData(); 
+                } else { 
+                    screenAuth.style.display = 'none'; 
+                    screenApp.style.display = 'none';
+                    screenSetup.style.display = 'flex'; 
+                }
+            }
+        } else {
+            // Utilisateur non connecté et pas en maintenance
+            screenAuth.style.display = 'flex'; 
+            screenApp.style.display = 'none'; 
+            screenSetup.style.display = 'none'; 
+            unsubscribers.forEach(u => u()); unsubscribers = [];
+            CURRENT_BUDGET_ID = null;
+            isDataLoaded = false;
+        }
+    }
+
 
     // --- NAVIGATION SPA & MOBILE ---
     function handleMobileSidebar() { if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); if (mobileOverlay) mobileOverlay.classList.remove('active'); } }
@@ -104,17 +177,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const evStart = new Date(ev.dateStart || ev.date).getTime();
                 const evEnd = new Date(ev.dateEnd || ev.date).getTime();
 
-                // Si la case actuelle est comprise entre le début et la fin de l'événement
                 if (currentCellTime >= evStart && currentCellTime <= evEnd) { 
                     let badgeClass = 'badge-perso';
                     if(ev.type.toLowerCase().includes('pro') || ev.type.toLowerCase().includes('travail')) badgeClass = 'badge-pro';
                     
-                    // NOUVEAU : Affichage de l'heure uniquement sur le premier jour de l'événement
                     let timePrefix = "";
                     if(ev.timeStart && currentCellTime === evStart) {
                         timePrefix = `🕒 ${ev.timeStart} - `;
                     }
-                    
                     cellHTML += `<div class="badge ${badgeClass} ${ev.important ? 'badge-important' : ''} delete-ev" data-id="${ev.id}" title="${ev.type} - ${ev.title}">${ev.important ? '⚠️ ' : ''}${timePrefix}${ev.title}</div>`; 
                 } 
             });
@@ -123,31 +193,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ASTUCE UX : Auto-remplissage de la date de fin quand la date de début est sélectionnée
     document.getElementById('ev-date-start')?.addEventListener('change', (e) => {
         const endInput = document.getElementById('ev-date-end');
-        if (!endInput.value || new Date(endInput.value) < new Date(e.target.value)) {
-            endInput.value = e.target.value;
-        }
+        if (!endInput.value || new Date(endInput.value) < new Date(e.target.value)) { endInput.value = e.target.value; }
     });
 
     document.getElementById('event-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); 
         const dStart = document.getElementById('ev-date-start').value;
         const dEnd = document.getElementById('ev-date-end').value;
-
-        // Sécurité
         if(new Date(dEnd) < new Date(dStart)) return alert("Erreur : La date de fin ne peut pas être avant la date de début.");
 
         await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), { 
-            dateStart: dStart, 
-            timeStart: document.getElementById('ev-time-start').value || "", // Optionnel
-            dateEnd: dEnd,
-            timeEnd: document.getElementById('ev-time-end').value || "", // Optionnel
-            title: document.getElementById('ev-title').value, 
-            type: document.getElementById('ev-type').value, 
-            important: document.getElementById('ev-important').checked, 
-            reminder: parseInt(document.getElementById('ev-reminder').value) 
+            dateStart: dStart, timeStart: document.getElementById('ev-time-start').value || "", 
+            dateEnd: dEnd, timeEnd: document.getElementById('ev-time-end').value || "", 
+            title: document.getElementById('ev-title').value, type: document.getElementById('ev-type').value, 
+            important: document.getElementById('ev-important').checked, reminder: parseInt(document.getElementById('ev-reminder').value) 
         }); 
         e.target.reset(); alert("Événement ajouté au calendrier !"); 
     });
@@ -202,7 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CHARGEMENT DATA FIREBASE ---
     function loadBudgetData() {
-        screenSetup.style.display = 'none'; screenApp.style.display = 'block';
+        if(isDataLoaded) return;
+        isDataLoaded = true;
+        screenApp.style.display = 'block';
         getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(d => { if(d.exists()) document.getElementById('display-invite-code').innerText = d.data().code; });
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/members`), s => { members = []; s.forEach(doc => members.push({ id: doc.id, ...doc.data() })); const me = members.find(mbr => mbr.id === auth.currentUser.uid); if(me && document.getElementById('admin-pseudo')) document.getElementById('admin-pseudo').value = me.name; renderMembers(); updateUI(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => { expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); updateUI(); }));
@@ -211,10 +274,9 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); checkReminders(); }));
     }
 
-    // --- LOGIQUE ADMINISTRATION (RECHERCHE INCLUSE) ---
+    // --- LOGIQUE ADMINISTRATION ---
     async function loadAdminData() {
         if(auth.currentUser.uid !== ADMIN_UID) return; 
-
         const usersSnap = await getDocs(collection(db, "users"));
         document.getElementById('admin-tot-users').innerText = usersSnap.size;
         const uList = document.getElementById('admin-user-list'); uList.innerHTML = '';
@@ -222,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const u = docSnap.data();
             uList.innerHTML += `<tr><td>${u.email || 'Ancien compte'}</td><td><small>${docSnap.id}</small></td><td>${u.budgetId || '<i>Aucun</i>'}</td><td><button class="delete-user-data btn-small" data-uid="${docSnap.id}" style="background:#e74c3c; color:white; padding:5px;">Purger</button></td></tr>`;
         });
-
         const budgetsSnap = await getDocs(collection(db, "budgets"));
         document.getElementById('admin-tot-budgets').innerText = budgetsSnap.size;
         const bList = document.getElementById('admin-budget-list'); bList.innerHTML = '';
@@ -233,13 +294,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('search-admin-users')?.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#admin-user-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; });
+        const term = e.target.value.toLowerCase(); document.querySelectorAll('#admin-user-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; });
     });
-
     document.getElementById('search-admin-budgets')?.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#admin-budget-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; });
+        const term = e.target.value.toLowerCase(); document.querySelectorAll('#admin-budget-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; });
     });
 
     // --- AUTHENTIFICATION ---
@@ -249,15 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } 
             else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now() }); }
         } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; }
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            if(user.uid === ADMIN_UID) document.getElementById('nav-admin').style.display = 'flex';
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            if (userDoc.exists() && userDoc.data().budgetId) { CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; loadBudgetData(); } 
-            else { screenAuth.style.display = 'none'; screenSetup.style.display = 'flex'; }
-        } else { screenAuth.style.display = 'flex'; screenApp.style.display = 'none'; screenSetup.style.display = 'none'; CURRENT_BUDGET_ID = null; unsubscribers.forEach(u => u()); }
     });
 
     // --- SETUP & PROFIL ---
@@ -278,25 +327,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
-    // --- GESTION DES CLICS MULTIPLES (Réduction, suppression, admin) ---
+    // --- GESTION DES CLICS MULTIPLES ---
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
         if(e.target.classList.contains('delete-exp')) { if(confirm("Supprimer l'opération ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-cat')) { if(confirm("Supprimer la catégorie ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-ev')) { if(confirm("Supprimer cet événement du calendrier ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/events`, e.target.dataset.id)); }
-        
-        if(e.target.classList.contains('delete-user-data')) { 
-            if(confirm("ATTENTION: Cela va purger les données de cet utilisateur et l'éjecter de son foyer. Continuer ?")) {
-                await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null });
-                alert("Utilisateur purgé."); loadAdminData();
-            }
-        }
-        if(e.target.classList.contains('delete-budget-data')) { 
-            if(confirm("DANGER EXTRÊME: Détruire ce foyer cassera l'application pour ses membres. Continuer ?")) {
-                await deleteDoc(doc(db, "budgets", e.target.dataset.bid));
-                alert("Foyer détruit."); loadAdminData();
-            }
-        }
+        if(e.target.classList.contains('delete-user-data')) { if(confirm("Purger les données de cet utilisateur et l'éjecter de son foyer ?")) { await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null }); alert("Utilisateur purgé."); loadAdminData(); } }
+        if(e.target.classList.contains('delete-budget-data')) { if(confirm("Détruire ce foyer cassera l'application pour ses membres. Continuer ?")) { await deleteDoc(doc(db, "budgets", e.target.dataset.bid)); alert("Foyer détruit."); loadAdminData(); } }
     });
 
     document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });

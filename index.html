@@ -7,28 +7,18 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* ==========================================================================
-           🛡️ SÉCURITÉ ANTI-DÉBORDEMENT GLOBALE
-           ========================================================================== */
         *, *::before, *::after { box-sizing: border-box; }
         html, body { max-width: 100%; overflow-x: hidden; position: relative; width: 100vw; margin: 0; padding: 0; }
 
-        /* --- LES THEMES DE COULEURS --- */
         :root { --primary: #4A90E2; --secondary: #50E3C2; --bg: #F4F7F6; --text: #333; --card-bg: #FFF; --border: #ddd; --sidebar-bg: #2C3E50; --sidebar-text: #ecf0f1; }
         body.theme-dark { --primary: #6ab0ff; --secondary: #50E3C2; --bg: #121212; --text: #f0f0f0; --card-bg: #1e1e1e; --border: #333; --sidebar-bg: #000; --sidebar-text: #fff; }
         body.theme-cosy { --primary: #D4A373; --secondary: #A9AF7E; --bg: #FAEDCD; --text: #5E503F; --card-bg: #FEFAE0; --border: #E9EDC9; --sidebar-bg: #5E503F; --sidebar-text: #FEFAE0; }
         body.theme-panda-geant { --primary: #388E3C; --secondary: #A5D6A7; --bg: #E8F5E9; --text: #212121; --card-bg: #FFF; --border: #C8E6C9; --sidebar-bg: #1B1B1B; --sidebar-text: #E8F5E9; }
         body.theme-panda-roux { --primary: #D84315; --secondary: #FFB74D; --bg: #FFF3E0; --text: #4E342E; --card-bg: #FFF; --border: #FFE0B2; --sidebar-bg: #6D4C41; --sidebar-text: #FFECB3; }
 
-        /* --- DÉCORATIONS THÈMES PANDAS --- */
-        body::before { 
-            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-            z-index: -1; opacity: 0; transition: opacity 0.5s ease-in-out; 
-            background-size: cover; background-position: center; pointer-events: none; 
-        }
+        body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; opacity: 0; transition: opacity 0.5s ease; background-size: cover; background-position: center; pointer-events: none; }
         .sidebar-footer { position: relative; }
-        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease-in-out; }
-
+        .sidebar-footer::before { content: ''; display: block; height: 120px; margin-bottom: 10px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; opacity: 0; transition: opacity 0.3s ease; }
         body.theme-panda-geant::before { opacity: 1; background-image: linear-gradient(rgba(242,244,242,0.6), rgba(242,244,242,0.6)), url('panda-geant.jpg'); }
         body.theme-panda-geant .sidebar-footer::before { opacity: 1; background-image: url('bb-panda-menu.png'); }
         body.theme-panda-roux::before { opacity: 1; background-image: linear-gradient(rgba(250,243,232,0.6), rgba(250,243,232,0.6)), url('fond-roux.jpg'); }
@@ -36,7 +26,6 @@
 
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); transition: 0.3s; display: flex; min-height: 100vh; }
         
-        /* --- SIDEBAR --- */
         .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; transition: transform 0.3s ease; z-index: 1001; }
         .sidebar.collapsed { transform: translateX(-260px); }
         .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: margin-left 0.3s ease; width: 100%; max-width: 100%; }
@@ -51,7 +40,6 @@
         .mobile-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; opacity: 0; transition: opacity 0.3s ease; }
         .mobile-overlay.active { display: block; opacity: 1; }
 
-        /* --- HEADER & ACTIONS --- */
         .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap; width: 100%; }
         .toggle-sidebar-btn { background: var(--sidebar-bg); color: white; border: none; width: 42px !important; height: 42px !important; border-radius: 8px; cursor: pointer; font-size: 1.4em; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 0 !important; padding: 0 !important; }
         .toggle-sidebar-btn:hover { background: var(--primary); }
@@ -59,11 +47,9 @@
         .action-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; align-items: center; width: 100%; }
         .action-bar-spacer { flex-grow: 1; }
 
-        /* --- POPUPS ET AUTH --- */
         .fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
         .auth-box { background: var(--card-bg); padding: 35px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
 
-        /* --- GRILLES ET CARTES --- */
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; align-items: start; width: 100%; }
         .grid-stats > div, .layout-split > div { min-width: 0; }
@@ -82,7 +68,6 @@
         button:hover { opacity: 0.9; }
         .btn-small { width: auto !important; margin: 0 !important; padding: 10px 15px !important; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
 
-        /* --- CUSTOM RADIO BUTTONS (DÉPENSE/REVENU) --- */
         .transaction-type-toggle { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }
         .radio-label { flex: 1; cursor: pointer; }
         .radio-label input { display: none; } 
@@ -90,7 +75,6 @@
         .radio-label input[value="expense"]:checked + .radio-btn { background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c; }
         .radio-label input[value="income"]:checked + .radio-btn { background: rgba(46, 204, 113, 0.1); border-color: #2ecc71; color: #2ecc71; }
 
-        /* --- SWITCH TOGGLES (Boutons iOS) --- */
         .switch-container { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; flex-shrink: 0; }
         .switch input { display: none; }
@@ -108,7 +92,6 @@
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
 
-        /* --- CALENDRIER --- */
         .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: var(--primary); width: 100%; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; width: 100%; }
         .calendar-day { min-height: 80px; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: rgba(0,0,0,0.02); font-size: 0.8em; display: flex; flex-direction: column; gap: 2px; }
@@ -122,9 +105,6 @@
         .badge-perso { background: #4A90E2; } .badge-pro { background: #9b59b6; }
         .badge-important { border-left: 4px solid #f1c40f; font-weight: bold; }
         
-        /* ========================================= */
-        /* 📱 RESPONSIVE DESIGN (MOBILE) */
-        /* ========================================= */
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
@@ -143,7 +123,15 @@
 
 <div id="mobile-overlay" class="mobile-overlay"></div>
 
-<div id="reminder-popup" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.8);">
+<div id="screen-maintenance" class="fullscreen-overlay" style="display:none; z-index: 3000;">
+    <div class="auth-box" style="border: 3px dashed #f39c12; background: var(--card-bg);">
+        <h1 style="font-size: 3.5em; margin: 0 0 10px 0;">🛠️</h1>
+        <h2 style="color: #f39c12; margin-top:0;">Maintenance en cours</h2>
+        <p style="color: var(--text); font-size: 0.95em;">Budget Duo est actuellement en cours de mise à jour pour vous offrir de nouvelles fonctionnalités.<br><br>Veuillez revenir un peu plus tard !</p>
+    </div>
+</div>
+
+<div id="reminder-popup" class="fullscreen-overlay" style="display:none; z-index: 2500; background: rgba(0,0,0,0.8);">
     <div class="auth-box" style="background: var(--card-bg); color: var(--text); border: 3px solid var(--primary);">
         <h2 style="color: var(--primary); margin-top:0;">🔔 Rappels</h2>
         <ul id="reminder-list" style="list-style:none; padding:0; text-align:left; max-height: 200px; overflow-y: auto; margin-bottom:20px;"></ul>
@@ -213,7 +201,6 @@
                     <h3 id="cal-month-display" style="margin:0;">---</h3>
                     <button id="cal-next" class="btn-small">Suiv. ➡️</button>
                 </div>
-                
                 <div style="margin-bottom:15px; background:var(--bg); padding:12px; border-radius:8px;">
                     <label class="switch-container">
                         <div class="switch">
@@ -223,7 +210,6 @@
                         <span style="font-size: 0.95em; font-weight: 500;">💰 Afficher les transactions</span>
                     </label>
                 </div>
-
                 <div class="calendar-header-days"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
@@ -231,15 +217,12 @@
             <div class="card">
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
                 <form id="event-form">
-                    
                     <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:10px; background:var(--bg); padding:10px; border-radius:8px;">
-                        
                         <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                             <label style="font-size:0.85em; font-weight:bold; color:var(--text); width:50px;">Début:</label>
                             <input type="date" id="ev-date-start" required style="margin-top:0; flex:2; padding:8px;">
                             <input type="time" id="ev-time-start" style="margin-top:0; flex:1; padding:8px;" title="Heure (Optionnelle)">
                         </div>
-
                         <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                             <label style="font-size:0.85em; font-weight:bold; color:var(--text); width:50px;">Fin:</label>
                             <input type="date" id="ev-date-end" required style="margin-top:0; flex:2; padding:8px;">
@@ -248,29 +231,18 @@
                     </div>
 
                     <input type="text" id="ev-title" placeholder="Titre (Ex: RDV Dentiste, Vacances...)" required>
-                    
                     <input type="text" id="ev-type" placeholder="Catégorie (Libre. Ex: Santé, Pro...)" list="default-event-types" required>
-                    <datalist id="default-event-types">
-                        <option value="👤 Personnel"></option>
-                        <option value="💼 Professionnel"></option>
-                        <option value="🎉 Fête / Anniversaire"></option>
-                        <option value="🏥 Santé / RDV"></option>
-                        <option value="✈️ Vacances"></option>
-                        <option value="🛒 Courses / Achats"></option>
-                    </datalist>
+                    <datalist id="default-event-types"><option value="👤 Personnel"></option><option value="💼 Professionnel"></option><option value="🎉 Fête / Anniversaire"></option><option value="🏥 Santé / RDV"></option><option value="✈️ Vacances"></option><option value="🛒 Courses / Achats"></option></datalist>
 
                     <div style="margin:15px 0; background:rgba(231, 76, 60, 0.05); border: 1px solid rgba(231, 76, 60, 0.2); padding:12px; border-radius:8px;">
                         <label class="switch-container" style="color:#e74c3c; font-weight:bold;">
-                            <div class="switch switch-important">
-                                <input type="checkbox" id="ev-important">
-                                <span class="slider"></span>
-                            </div>
+                            <div class="switch switch-important"><input type="checkbox" id="ev-important"><span class="slider"></span></div>
                             <span>⚠️ Événement Important</span>
                         </label>
                     </div>
 
                     <label style="font-size:0.85em; font-weight:bold;">🔔 M'alerter via Pop-up :</label>
-                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun rappel</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
+                    <select id="ev-reminder" style="margin-top:5px;"><option value="0">Aucun</option><option value="1">1 jour avant</option><option value="3">3 jours avant</option><option value="7">7 jours avant</option></select>
                     <button type="submit">Ajouter au calendrier</button>
                 </form>
             </div>
@@ -296,6 +268,19 @@
     <div id="view-admin" style="display:none;">
         <h2 style="color:#d35400; margin-top:0;">👑 Panneau d'Administration</h2>
         <p style="color:#666;">Vue restreinte. Vous seul avez accès à ces données.</p>
+        
+        <div class="card" style="border-top: 4px solid #f39c12; margin-bottom: 25px; background: rgba(243, 156, 18, 0.05);">
+            <h3 style="margin-top:0; color:#d35400;">🛠️ Contrôle de la Maintenance</h3>
+            <p style="font-size:0.85em; color:var(--text);">Activez ce mode pour expulser immédiatement tous les utilisateurs et bloquer l'accès à l'application. En tant qu'Administrateur, vous ne serez pas déconnecté.</p>
+            <label class="switch-container" style="color:#d35400; font-weight:bold; margin-top:15px;">
+                <div class="switch switch-important">
+                    <input type="checkbox" id="admin-maintenance-toggle">
+                    <span class="slider"></span>
+                </div>
+                <span>Activer la Maintenance Globale</span>
+            </label>
+        </div>
+
         <div class="grid-stats">
             <div class="card" style="border-top: 4px solid #3498db;"><h3>👥 Total Utilisateurs</h3><span id="admin-tot-users" class="balance">0</span></div>
             <div class="card" style="border-top: 4px solid #2ecc71;"><h3>🏠 Foyers Actifs</h3><span id="admin-tot-budgets" class="balance">0</span></div>
