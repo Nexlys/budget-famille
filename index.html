@@ -51,7 +51,8 @@
         .fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
         .auth-box { background: var(--card-bg); padding: 35px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
 
-        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; }
+        /* ⬇️ LA CORRECTION EST ICI : align-items: start; ⬇️ */
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; align-items: start; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; align-items: start; width: 100%; }
         .grid-stats > div, .layout-split > div { min-width: 0; }
 
@@ -116,7 +117,7 @@
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
             .main-content { margin-left: 0 !important; padding: 15px; width: 100vw; max-width: 100vw; overflow-x: hidden; }
-            .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+            .grid-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: stretch; } /* Reste étiré sur mobile si besoin */
             .layout-split { display: flex; flex-direction: column; gap: 15px; width: 100%; }
             .card { padding: 15px; width: 100%; box-sizing: border-box; }
             .action-bar { flex-direction: column; align-items: stretch; }
@@ -135,8 +136,7 @@
     <div class="auth-box" style="border: 2px solid var(--primary); padding: 25px;">
         <h2 id="custom-dialog-title" style="color: var(--primary); margin-top:0;">Information</h2>
         <p id="custom-dialog-msg" style="color: var(--text); font-size: 1em; margin-bottom: 25px; line-height:1.5;"></p>
-        <div id="custom-dialog-btns" style="display: flex; gap: 10px; justify-content: center;">
-            </div>
+        <div id="custom-dialog-btns" style="display: flex; gap: 10px; justify-content: center;"></div>
     </div>
 </div>
 
