@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
     const viewSubs = document.getElementById('view-subscriptions');
-    const viewPanda = document.getElementById('view-panda'); // NOUVEAU
+    const viewPanda = document.getElementById('view-panda'); 
     
     const navItems = document.querySelectorAll('.nav-item');
 
@@ -87,72 +87,117 @@ document.addEventListener('DOMContentLoaded', () => {
     let pandaWriteTimeout = null;
     let isOverBudget = false;
 
+    // Variables pour le "Mode Éponge/Brosse"
+    let isWashingMode = false;
+    let washLastX = null;
+    let pandaPetAccumulator = 0;
+    const pandaViewer = document.getElementById('panda-3d');
+    const pandaContainer = document.getElementById('panda-3d-container');
+    const btnWash = document.getElementById('btn-panda-wash');
+
     function checkPandaVisibility() {
         const theme = localStorage.getItem('budgetTheme') || 'light';
         const isPandaTheme = (theme === 'panda-geant');
-        
         const nav1 = document.getElementById('nav-panda'); if(nav1) nav1.style.display = isPandaTheme ? 'flex' : 'none';
         const nav2 = document.getElementById('bnav-panda'); if(nav2) nav2.style.display = isPandaTheme ? 'flex' : 'none';
-        
-        // Si on quitte le thème, on quitte la page panda
-        if(!isPandaTheme && viewPanda.style.display === 'block') {
-            document.getElementById('nav-dashboard').click();
-        }
+        if(!isPandaTheme && viewPanda.style.display === 'block') { document.getElementById('nav-dashboard').click(); }
     }
 
     function savePandaState() {
         if(!CURRENT_BUDGET_ID) return;
         clearTimeout(pandaWriteTimeout);
-        pandaWriteTimeout = setTimeout(() => {
-            updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { ...pandaData, lastUpdate: Date.now() });
-        }, 1000);
+        pandaWriteTimeout = setTimeout(() => { updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { ...pandaData, lastUpdate: Date.now() }); }, 1000);
     }
 
     function spawnParticle(emoji, x, y) {
         const p = document.createElement('div');
-        p.innerText = emoji;
-        p.className = 'floating-particle';
+        p.innerText = emoji; p.className = 'floating-particle';
         p.style.left = (x - 15) + 'px'; p.style.top = (y - 15) + 'px';
         document.body.appendChild(p);
         setTimeout(() => p.remove(), 1000);
     }
 
-    // Interaction : Câlin / Bain (Toucher le container 3D)
-    document.getElementById('panda-3d-container')?.addEventListener('pointerdown', (e) => {
+    // 🧽 Bouton Activer/Désactiver la Brosse
+    btnWash?.addEventListener('click', () => {
         if(pandaData.isSleeping) return customAlert("Chut... il dort. Éteignez la lumière pour le réveiller.", "Zzz...");
         
-        // Si très sale, le clic fait un bain, sinon un câlin
-        if(pandaData.hygiene < 80) {
-            pandaData.hygiene = Math.min(100, pandaData.hygiene + 5);
-            spawnParticle('🫧', e.clientX, e.clientY);
+        isWashingMode = !isWashingMode;
+        
+        if (isWashingMode) {
+            btnWash.classList.add('washing-active');
+            if(pandaViewer) pandaViewer.removeAttribute('camera-controls'); // Bloque la rotation 3D
+            customAlert("Mode Bain activé 🧼 !<br><br>Frottez l'écran (le cadre du panda) avec votre doigt ou votre souris pour le laver.<br><br>Recliquez sur l'éponge pour terminer.", "L'heure du bain !");
         } else {
-            pandaData.love = Math.min(100, pandaData.love + 5);
-            spawnParticle('❤️', e.clientX, e.clientY);
+            btnWash.classList.remove('washing-active');
+            if(pandaViewer) pandaViewer.setAttribute('camera-controls', 'true'); // Débloque la rotation 3D
         }
-        updatePandaUI(); savePandaState();
     });
 
-    // Interaction : Nourrir
+    // ❤️ Interaction Câlin (Clic simple) 
+    pandaContainer?.addEventListener('pointerdown', (e) => {
+        if(pandaData.isSleeping) return customAlert("Chut... il dort. Éteignez la lumière pour le réveiller.", "Zzz...");
+        
+        // Si on est en mode Brosse, le pointerdown sert juste de point de départ au frottement
+        if(isWashingMode) {
+            washLastX = e.clientX;
+        } else {
+            // Sinon, c'est un câlin normal !
+            if(pandaData.love < 100) {
+                pandaData.love = Math.min(100, pandaData.love + 5);
+                spawnParticle('❤️', e.clientX, e.clientY);
+                updatePandaUI(); savePandaState();
+            }
+        }
+    });
+
+    // 🧼 Interaction Frottement (Quand on bouge sur l'écran en mode Brosse)
+    pandaContainer?.addEventListener('pointermove', (e) => {
+        if (!isWashingMode || washLastX === null) return; // Ne fait rien si pas en mode lavage
+        
+        // On calcule la distance parcourue par le doigt/souris
+        pandaPetAccumulator += Math.abs(e.clientX - washLastX);
+        
+        // Tous les X pixels frottés, on gagne 1 point d'hygiène et on fait une bulle
+        if (pandaPetAccumulator > 30) {
+            pandaPetAccumulator = 0;
+            if(pandaData.hygiene < 100) {
+                pandaData.hygiene = Math.min(100, pandaData.hygiene + 2);
+                spawnParticle('🫧', e.clientX, e.clientY);
+                updatePandaUI(); savePandaState();
+            }
+        }
+        washLastX = e.clientX;
+    });
+
+    // Arrête le frottement quand on lève le doigt/souris
+    pandaContainer?.addEventListener('pointerup', () => washLastX = null);
+    pandaContainer?.addEventListener('pointerleave', () => washLastX = null);
+
+    // Nourrir
     document.getElementById('btn-panda-feed')?.addEventListener('click', () => {
         if(pandaData.isSleeping) return customAlert("Il faut le réveiller avant de manger !", "Zzz...");
         if(pandaData.hunger >= 100) return customAlert("Il n'a plus faim pour le moment, il a le ventre plein ! 🐼", "Repu !");
         
         pandaData.hunger = Math.min(100, pandaData.hunger + 20);
         
-        // Animation CSS d'un bambou qui tombe
-        const container = document.getElementById('panda-3d-container');
-        const bamboo = document.createElement('div');
-        bamboo.innerText = '🎋';
+        const bamboo = document.createElement('div'); bamboo.innerText = '🎋';
         bamboo.style.position = 'absolute'; bamboo.style.fontSize = '50px'; bamboo.style.left = '50%'; bamboo.style.zIndex = '10';
-        bamboo.style.animation = 'floatUp 1s ease-in reverse forwards'; // Tombe vers le bas
-        container.appendChild(bamboo);
+        bamboo.style.animation = 'floatUp 1s ease-in reverse forwards'; 
+        pandaContainer.appendChild(bamboo);
         setTimeout(() => bamboo.remove(), 1000);
 
         updatePandaUI(); savePandaState();
     });
 
-    // Interaction : Dormir (Lumière)
+    // Dormir (Lumière)
     document.getElementById('btn-panda-sleep')?.addEventListener('click', () => {
+        // Désactive le mode brosse si on s'endort
+        if(isWashingMode) {
+            isWashingMode = false;
+            btnWash.classList.remove('washing-active');
+            if(pandaViewer) pandaViewer.setAttribute('camera-controls', 'true');
+        }
+
         pandaData.isSleeping = !pandaData.isSleeping;
         updatePandaUI(); savePandaState();
     });
@@ -171,37 +216,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updatePandaUI() {
-        // Barres
         document.getElementById('p-bar-love').style.width = pandaData.love + '%';
         document.getElementById('p-bar-hunger').style.width = pandaData.hunger + '%';
         document.getElementById('p-bar-hygiene').style.width = pandaData.hygiene + '%';
         document.getElementById('p-bar-energy').style.width = pandaData.energy + '%';
         
-        // Pièces
-        const coinDisplay = document.getElementById('panda-coins-display');
-        if(coinDisplay) coinDisplay.innerText = pandaData.coins;
-
-        // Sommeil
-        const overlay = document.getElementById('panda-room-overlay');
-        const bubble = document.getElementById('panda-mood-bubble');
+        const coinDisplay = document.getElementById('panda-coins-display'); if(coinDisplay) coinDisplay.innerText = pandaData.coins;
+        const overlay = document.getElementById('panda-room-overlay'); const bubble = document.getElementById('panda-mood-bubble');
         if(overlay) overlay.style.opacity = pandaData.isSleeping ? '1' : '0';
         
-        // Humeur & Bulle
         if(bubble) {
-            if(pandaData.isSleeping) {
-                bubble.style.display = 'block'; bubble.innerText = "Zzz... Zzz...";
-            } else if (isOverBudget) {
-                bubble.style.display = 'block'; bubble.innerText = "Je m'inquiète pour notre budget... 😰";
-            } else if (pandaData.hunger < 30) {
-                bubble.style.display = 'block'; bubble.innerText = "J'ai faaaaaim 🎋";
-            } else if (pandaData.hygiene < 30) {
-                bubble.style.display = 'block'; bubble.innerText = "Je suis tout sale 🧼";
-            } else {
-                bubble.style.display = 'none'; // Content
-            }
+            if(pandaData.isSleeping) { bubble.style.display = 'block'; bubble.innerText = "Zzz... Zzz..."; } 
+            else if (isOverBudget) { bubble.style.display = 'block'; bubble.innerText = "Je m'inquiète pour notre budget... 😰"; } 
+            else if (pandaData.hunger < 30) { bubble.style.display = 'block'; bubble.innerText = "J'ai faaaaaim 🎋"; } 
+            else if (pandaData.hygiene < 30) { bubble.style.display = 'block'; bubble.innerText = "Je suis tout sale 🧼"; } 
+            else { bubble.style.display = 'none'; }
         }
 
-        // Accessoires
         const hat = document.getElementById('acc-hat'); if(hat) hat.style.display = pandaData.hat ? 'block' : 'none';
         const glasses = document.getElementById('acc-glasses'); if(glasses) glasses.style.display = pandaData.glasses ? 'block' : 'none';
     }
@@ -234,13 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uSnap.exists()) {
             const uData = uSnap.data();
             if (uData.lastLoginDate !== todayStr) {
-                // Cadeau de connexion journalière !
                 await updateDoc(uRef, { lastLoginDate: todayStr, lastLogin: Date.now() });
-                if(CURRENT_BUDGET_ID) {
-                    pandaData.coins += 10;
-                    savePandaState();
-                    // On n'alerte pas forcément pour pas spammer, mais c'est enregistré
-                }
+                if(CURRENT_BUDGET_ID) { pandaData.coins += 10; savePandaState(); }
             }
         }
     }
@@ -268,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
     document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now(), lastLoginDate: '' }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
 
-    // --- NAVIGATION (SYNCRO PC ET MOBILE) ---
+    // --- NAVIGATION ---
     function switchView(viewElement, navId, bnavId) {
         viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; viewPanda.style.display = 'none';
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
@@ -392,7 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €'; document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
         document.getElementById('solde-actuel').innerText = (rev - dep).toFixed(2) + ' €'; document.getElementById('solde-actuel').style.color = (rev - dep) >= 0 ? '#2ecc71' : '#e74c3c';
         
-        // Panda Mood Check
         isOverBudget = (dep > rev && rev > 0);
         updatePandaUI();
 
@@ -446,23 +471,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const now = Date.now();
                 const daysPassed = (now - p.lastUpdate) / (1000 * 60 * 60 * 24);
                 
-                // Si on a attendu, on baisse ou on monte les jauges
                 if(daysPassed >= 0.1) {
-                    const decay = Math.floor(daysPassed * 20); // Perd 20 points par 24h
+                    const decay = Math.floor(daysPassed * 20); 
                     pandaData.love = Math.max(0, p.love - decay);
                     pandaData.hunger = Math.max(0, p.hunger - decay);
                     pandaData.hygiene = Math.max(0, p.hygiene - decay);
                     
-                    if(p.isSleeping) {
-                        pandaData.energy = Math.min(100, p.energy + (decay * 3)); // Dort = regen
-                    } else {
-                        pandaData.energy = Math.max(0, p.energy - decay); // Reveillé = perd energie
-                    }
+                    if(p.isSleeping) { pandaData.energy = Math.min(100, p.energy + (decay * 3)); } 
+                    else { pandaData.energy = Math.max(0, p.energy - decay); }
                     
-                    pandaData.coins = p.coins || 0;
-                    pandaData.hat = p.hat || false;
-                    pandaData.glasses = p.glasses || false;
-                    pandaData.isSleeping = p.isSleeping || false;
+                    pandaData.coins = p.coins || 0; pandaData.hat = p.hat || false; pandaData.glasses = p.glasses || false; pandaData.isSleeping = p.isSleeping || false;
                     savePandaState();
                 } else {
                     pandaData = p; updatePandaUI();
@@ -501,10 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
             if(targetGoal) {
                 await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
-                
-                // 🐼 GAIN DE PIÈCES SI ON ÉPARGNE !
                 pandaData.coins += 50; savePandaState();
-                
                 if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
             }
         } 

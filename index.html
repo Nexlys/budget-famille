@@ -6,7 +6,6 @@
     <title>Budget Duo</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
     <style>
@@ -143,6 +142,9 @@
         .panda-stat-row .progress-bar { margin:0; flex:1; height:10px; background:rgba(0,0,0,0.1); }
         .floating-particle { position: absolute; pointer-events: none; z-index: 4000; font-size: 24px; animation: floatUp 1s ease-out forwards; }
         @keyframes floatUp { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-50px) scale(1.5); opacity: 0; } }
+        
+        /* 🧽 Effet visuel quand le mode Brosse est actif */
+        .washing-active { box-shadow: 0 0 15px #3498db !important; transform: scale(1.1); background:#2980b9 !important; border: 2px solid white; }
     </style>
 </head>
 <body>
@@ -312,9 +314,10 @@
 
                 <div style="display:flex; justify-content:center; gap:10px; position:relative; z-index:3; margin-top:15px;">
                     <button id="btn-panda-feed" class="btn-small" style="background:#2ecc71; color:white; font-size:1.2em;" title="Nourrir">🎋</button>
-                    <button id="btn-panda-sleep" class="btn-small" style="background:#34495e; color:white; font-size:1.2em;" title="Allumer/Éteindre">💡</button>
+                    <button id="btn-panda-wash" class="btn-small" style="background:#3498db; color:white; font-size:1.2em; transition:0.3s;" title="Laver">🧽</button>
+                    <button id="btn-panda-sleep" class="btn-small" style="background:#34495e; color:white; font-size:1.2em;" title="Dormir">💡</button>
                 </div>
-                <p style="text-align:center; font-size:0.8em; color:#555; position:relative; z-index:3; margin-top:10px;"><b>Câlin :</b> Cliquez. <b>Bain :</b> Frottez l'écran !</p>
+                <p style="text-align:center; font-size:0.8em; color:#555; position:relative; z-index:3; margin-top:10px;"><b>Câlin :</b> Cliquez sur le panda. <br><b>Bain :</b> Activez l'éponge 🧽 et frottez !</p>
             </div>
 
             <div class="card">
