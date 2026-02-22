@@ -66,6 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
     const viewSubs = document.getElementById('view-subscriptions');
+    const viewPanda = document.getElementById('view-panda'); // NOUVEAU
+    
+    const navItems = document.querySelectorAll('.nav-item');
 
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
@@ -79,89 +82,132 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingExpenseId = null; 
     let deferredPrompt; 
 
-    // --- 🐼 LE NOUVEAU TAMAGOTCHI PANDA ---
-    let pandaLove = 50;
-    let pandaHunger = 50;
+    // --- 🐼 MOTEUR DU TAMAGOTCHI 3D ---
+    let pandaData = { love: 50, hunger: 50, hygiene: 50, energy: 50, coins: 0, hat: false, glasses: false, isSleeping: false };
     let pandaWriteTimeout = null;
+    let isOverBudget = false;
 
     function checkPandaVisibility() {
         const theme = localStorage.getItem('budgetTheme') || 'light';
-        const pandaBtn = document.getElementById('panda-trigger-btn');
-        if (theme === 'panda-geant' && CURRENT_BUDGET_ID) {
-            pandaBtn.style.display = 'block';
-        } else {
-            pandaBtn.style.display = 'none';
-        }
-    }
-
-    document.getElementById('panda-trigger-btn')?.addEventListener('click', () => { document.getElementById('modal-panda-game').style.display = 'flex'; });
-    document.getElementById('btn-close-panda')?.addEventListener('click', () => { document.getElementById('modal-panda-game').style.display = 'none'; });
-
-    function updatePandaUI() {
-        document.getElementById('panda-love-text').innerText = pandaLove + '%';
-        document.getElementById('panda-love-fill').style.width = pandaLove + '%';
-        document.getElementById('panda-hunger-text').innerText = pandaHunger + '%';
-        document.getElementById('panda-hunger-fill').style.width = pandaHunger + '%';
-    }
-
-    function spawnHeart(x, y) {
-        const heart = document.createElement('div');
-        heart.innerText = '❤️'; heart.style.position = 'fixed'; heart.style.left = (x - 10) + 'px'; heart.style.top = (y - 10) + 'px'; heart.style.fontSize = '24px'; heart.style.pointerEvents = 'none'; heart.style.zIndex = '4000';
-        document.body.appendChild(heart);
-        const anim = heart.animate([{ transform: 'translateY(0) scale(1)', opacity: 1 }, { transform: 'translateY(-100px) scale(1.5)', opacity: 0 }], { duration: 1000, easing: 'ease-out' });
-        anim.onfinish = () => heart.remove();
-    }
-
-    // Le clic pour faire un câlin
-    document.getElementById('interactive-panda')?.addEventListener('click', (e) => {
-        const panda = document.getElementById('css-panda');
+        const isPandaTheme = (theme === 'panda-geant');
         
-        // Ajoute la classe happy pour plisser les yeux et bouger les oreilles
-        panda.classList.add('happy');
-        setTimeout(() => panda.classList.remove('happy'), 800);
-
-        spawnHeart(e.clientX, e.clientY);
-
-        if(pandaLove < 100) {
-            pandaLove = Math.min(100, pandaLove + 5);
-            updatePandaUI();
-            clearTimeout(pandaWriteTimeout);
-            pandaWriteTimeout = setTimeout(() => { updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: pandaLove, lastUpdate: Date.now() }); }, 1500);
+        const nav1 = document.getElementById('nav-panda'); if(nav1) nav1.style.display = isPandaTheme ? 'flex' : 'none';
+        const nav2 = document.getElementById('bnav-panda'); if(nav2) nav2.style.display = isPandaTheme ? 'flex' : 'none';
+        
+        // Si on quitte le thème, on quitte la page panda
+        if(!isPandaTheme && viewPanda.style.display === 'block') {
+            document.getElementById('nav-dashboard').click();
         }
+    }
+
+    function savePandaState() {
+        if(!CURRENT_BUDGET_ID) return;
+        clearTimeout(pandaWriteTimeout);
+        pandaWriteTimeout = setTimeout(() => {
+            updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { ...pandaData, lastUpdate: Date.now() });
+        }, 1000);
+    }
+
+    function spawnParticle(emoji, x, y) {
+        const p = document.createElement('div');
+        p.innerText = emoji;
+        p.className = 'floating-particle';
+        p.style.left = (x - 15) + 'px'; p.style.top = (y - 15) + 'px';
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 1000);
+    }
+
+    // Interaction : Câlin / Bain (Toucher le container 3D)
+    document.getElementById('panda-3d-container')?.addEventListener('pointerdown', (e) => {
+        if(pandaData.isSleeping) return customAlert("Chut... il dort. Éteignez la lumière pour le réveiller.", "Zzz...");
+        
+        // Si très sale, le clic fait un bain, sinon un câlin
+        if(pandaData.hygiene < 80) {
+            pandaData.hygiene = Math.min(100, pandaData.hygiene + 5);
+            spawnParticle('🫧', e.clientX, e.clientY);
+        } else {
+            pandaData.love = Math.min(100, pandaData.love + 5);
+            spawnParticle('❤️', e.clientX, e.clientY);
+        }
+        updatePandaUI(); savePandaState();
     });
 
-    // Le bouton Nourrir
-    document.getElementById('btn-feed-panda')?.addEventListener('click', () => {
-        if(pandaHunger >= 100) return customAlert("Il n'a plus faim pour le moment, il a le ventre plein ! 🐼", "Repu !");
+    // Interaction : Nourrir
+    document.getElementById('btn-panda-feed')?.addEventListener('click', () => {
+        if(pandaData.isSleeping) return customAlert("Il faut le réveiller avant de manger !", "Zzz...");
+        if(pandaData.hunger >= 100) return customAlert("Il n'a plus faim pour le moment, il a le ventre plein ! 🐼", "Repu !");
         
-        const panda = document.getElementById('css-panda');
-        panda.classList.add('eating'); // Fait mastiquer la tête
+        pandaData.hunger = Math.min(100, pandaData.hunger + 20);
         
-        // Fait tomber un bambou
+        // Animation CSS d'un bambou qui tombe
+        const container = document.getElementById('panda-3d-container');
         const bamboo = document.createElement('div');
         bamboo.innerText = '🎋';
-        bamboo.className = 'bamboo-drop';
-        bamboo.style.left = '80px';
-        document.getElementById('interactive-panda').appendChild(bamboo);
+        bamboo.style.position = 'absolute'; bamboo.style.fontSize = '50px'; bamboo.style.left = '50%'; bamboo.style.zIndex = '10';
+        bamboo.style.animation = 'floatUp 1s ease-in reverse forwards'; // Tombe vers le bas
+        container.appendChild(bamboo);
+        setTimeout(() => bamboo.remove(), 1000);
 
-        setTimeout(() => {
-            panda.classList.remove('eating');
-            bamboo.remove();
-        }, 1000);
-
-        pandaHunger = Math.min(100, pandaHunger + 15);
-        updatePandaUI();
-        updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { hunger: pandaHunger, lastUpdate: Date.now() });
+        updatePandaUI(); savePandaState();
     });
+
+    // Interaction : Dormir (Lumière)
+    document.getElementById('btn-panda-sleep')?.addEventListener('click', () => {
+        pandaData.isSleeping = !pandaData.isSleeping;
+        updatePandaUI(); savePandaState();
+    });
+
+    // Boutique
+    document.getElementById('btn-buy-hat')?.addEventListener('click', () => {
+        if(pandaData.hat) return customAlert("Vous possédez déjà ce magnifique chapeau !");
+        if(pandaData.coins < 100) return customAlert("Vous n'avez pas assez de pièces. Économisez davantage !");
+        pandaData.coins -= 100; pandaData.hat = true; updatePandaUI(); savePandaState(); customAlert("Chapeau acheté !");
+    });
+
+    document.getElementById('btn-buy-glasses')?.addEventListener('click', () => {
+        if(pandaData.glasses) return customAlert("Vous possédez déjà ces lunettes !");
+        if(pandaData.coins < 200) return customAlert("Vous n'avez pas assez de pièces.");
+        pandaData.coins -= 200; pandaData.glasses = true; updatePandaUI(); savePandaState(); customAlert("Lunettes achetées !");
+    });
+
+    function updatePandaUI() {
+        // Barres
+        document.getElementById('p-bar-love').style.width = pandaData.love + '%';
+        document.getElementById('p-bar-hunger').style.width = pandaData.hunger + '%';
+        document.getElementById('p-bar-hygiene').style.width = pandaData.hygiene + '%';
+        document.getElementById('p-bar-energy').style.width = pandaData.energy + '%';
+        
+        // Pièces
+        const coinDisplay = document.getElementById('panda-coins-display');
+        if(coinDisplay) coinDisplay.innerText = pandaData.coins;
+
+        // Sommeil
+        const overlay = document.getElementById('panda-room-overlay');
+        const bubble = document.getElementById('panda-mood-bubble');
+        if(overlay) overlay.style.opacity = pandaData.isSleeping ? '1' : '0';
+        
+        // Humeur & Bulle
+        if(bubble) {
+            if(pandaData.isSleeping) {
+                bubble.style.display = 'block'; bubble.innerText = "Zzz... Zzz...";
+            } else if (isOverBudget) {
+                bubble.style.display = 'block'; bubble.innerText = "Je m'inquiète pour notre budget... 😰";
+            } else if (pandaData.hunger < 30) {
+                bubble.style.display = 'block'; bubble.innerText = "J'ai faaaaaim 🎋";
+            } else if (pandaData.hygiene < 30) {
+                bubble.style.display = 'block'; bubble.innerText = "Je suis tout sale 🧼";
+            } else {
+                bubble.style.display = 'none'; // Content
+            }
+        }
+
+        // Accessoires
+        const hat = document.getElementById('acc-hat'); if(hat) hat.style.display = pandaData.hat ? 'block' : 'none';
+        const glasses = document.getElementById('acc-glasses'); if(glasses) glasses.style.display = pandaData.glasses ? 'block' : 'none';
+    }
 
 
     // --- 🌍 GESTION RÉSEAU & INSTALLATION PWA ---
-    window.addEventListener('online', () => document.getElementById('status-indicator').innerText = "● Connecté");
-    window.addEventListener('offline', () => { document.getElementById('status-indicator').innerText = "● Hors-ligne"; document.getElementById('status-indicator').style.color = "#e74c3c"; });
-
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const installCard = document.getElementById('install-app-card'); if(installCard) installCard.style.display = 'block'; });
-    document.getElementById('btn-install-pwa')?.addEventListener('click', async () => { if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') document.getElementById('install-app-card').style.display = 'none'; deferredPrompt = null; } });
-
     onSnapshot(doc(db, "settings", "system"), (d) => {
         if(d.exists()) {
             const data = d.data();
@@ -177,7 +223,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-admin-announce')?.addEventListener('click', async () => { if(auth.currentUser.uid !== ADMIN_UID) return; const msg = document.getElementById('admin-announcement-input').value; await setDoc(doc(db, "settings", "system"), { announcement: msg }, { merge: true }); customAlert(msg === "" ? "Annonce retirée." : "Annonce publiée à tous les utilisateurs !", "Annonce"); });
     document.getElementById('btn-admin-bypass')?.addEventListener('click', () => { screenMaintenance.style.display = 'none'; screenAuth.style.display = 'flex'; });
 
-    onAuthStateChanged(auth, async (user) => { currentUserObj = user; if (user) { await updateDoc(doc(db, "users", user.uid), { lastLogin: Date.now() }).catch(e=>{}); } renderAppState(); });
+    onAuthStateChanged(auth, async (user) => { currentUserObj = user; renderAppState(); });
+
+    async function checkDailyLogin() {
+        if(!currentUserObj) return;
+        const uRef = doc(db, "users", currentUserObj.uid);
+        const uSnap = await getDoc(uRef);
+        const todayStr = new Date().toLocaleDateString('fr-FR');
+        
+        if (uSnap.exists()) {
+            const uData = uSnap.data();
+            if (uData.lastLoginDate !== todayStr) {
+                // Cadeau de connexion journalière !
+                await updateDoc(uRef, { lastLoginDate: todayStr, lastLogin: Date.now() });
+                if(CURRENT_BUDGET_ID) {
+                    pandaData.coins += 10;
+                    savePandaState();
+                    // On n'alerte pas forcément pour pas spammer, mais c'est enregistré
+                }
+            }
+        }
+    }
 
     async function renderAppState() {
         if (isMaintenance && (!currentUserObj || currentUserObj.uid !== ADMIN_UID)) { screenMaintenance.style.display = 'flex'; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; screenApp.style.display = 'none'; if (currentUserObj) await signOut(auth); return; }
@@ -186,7 +252,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if(currentUserObj.uid === ADMIN_UID) document.getElementById('nav-admin').style.display = 'flex';
             if (!isDataLoaded) { 
                 const userDoc = await getDoc(doc(db, "users", currentUserObj.uid));
-                if (userDoc.exists() && userDoc.data().budgetId) { CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; loadBudgetData(); checkPandaVisibility(); } 
+                if (userDoc.exists() && userDoc.data().budgetId) { 
+                    CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; 
+                    loadBudgetData(); checkDailyLogin(); checkPandaVisibility(); 
+                } 
                 else { screenAuth.style.display = 'none'; screenApp.style.display = 'none'; screenSetup.style.display = 'flex'; }
             }
         } else {
@@ -197,10 +266,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('toggle-password')?.addEventListener('click', (e) => { const pwdInput = document.getElementById('auth-password'); if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } else { pwdInput.type = 'password'; e.target.innerText = '👁️'; } });
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
-    document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now() }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
+    document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now(), lastLoginDate: '' }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
 
+    // --- NAVIGATION (SYNCRO PC ET MOBILE) ---
     function switchView(viewElement, navId, bnavId) {
-        viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none';
+        viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; viewPanda.style.display = 'none';
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
         viewElement.style.display = 'block';
         if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
@@ -217,11 +287,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
     document.getElementById('nav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
     document.getElementById('nav-admin')?.addEventListener('click', () => { switchView(viewAdmin, 'nav-admin', null); document.getElementById('fab-quick-add').style.display='none'; loadAdminData(); });
+    document.getElementById('nav-panda')?.addEventListener('click', () => { switchView(viewPanda, 'nav-panda', 'bnav-panda'); document.getElementById('fab-quick-add').style.display='none'; });
 
     document.getElementById('bnav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-quick-add').style.display='flex'; });
     document.getElementById('bnav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-quick-add').style.display='none';});
     document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
     document.getElementById('bnav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
+    document.getElementById('bnav-panda')?.addEventListener('click', () => { switchView(viewPanda, 'nav-panda', 'bnav-panda'); document.getElementById('fab-quick-add').style.display='none'; });
 
     document.getElementById('btn-open-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); } });
     document.getElementById('btn-close-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'none'; });
@@ -319,6 +391,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €'; document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
         document.getElementById('solde-actuel').innerText = (rev - dep).toFixed(2) + ' €'; document.getElementById('solde-actuel').style.color = (rev - dep) >= 0 ? '#2ecc71' : '#e74c3c';
+        
+        // Panda Mood Check
+        isOverBudget = (dep > rev && rev > 0);
+        updatePandaUI();
 
         const propContainer = document.getElementById('proportional-container');
         if(propContainer) {
@@ -369,17 +445,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 const p = d.data();
                 const now = Date.now();
                 const daysPassed = (now - p.lastUpdate) / (1000 * 60 * 60 * 24);
-                if(daysPassed >= 1) {
-                    const decay = Math.floor(daysPassed) * 10;
-                    pandaLove = Math.max(0, p.love - decay);
-                    pandaHunger = Math.max(0, p.hunger - decay);
-                    updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: pandaLove, hunger: pandaHunger, lastUpdate: now });
+                
+                // Si on a attendu, on baisse ou on monte les jauges
+                if(daysPassed >= 0.1) {
+                    const decay = Math.floor(daysPassed * 20); // Perd 20 points par 24h
+                    pandaData.love = Math.max(0, p.love - decay);
+                    pandaData.hunger = Math.max(0, p.hunger - decay);
+                    pandaData.hygiene = Math.max(0, p.hygiene - decay);
+                    
+                    if(p.isSleeping) {
+                        pandaData.energy = Math.min(100, p.energy + (decay * 3)); // Dort = regen
+                    } else {
+                        pandaData.energy = Math.max(0, p.energy - decay); // Reveillé = perd energie
+                    }
+                    
+                    pandaData.coins = p.coins || 0;
+                    pandaData.hat = p.hat || false;
+                    pandaData.glasses = p.glasses || false;
+                    pandaData.isSleeping = p.isSleeping || false;
+                    savePandaState();
                 } else {
-                    pandaLove = p.love; pandaHunger = p.hunger;
-                    updatePandaUI();
+                    pandaData = p; updatePandaUI();
                 }
             } else {
-                setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: 50, hunger: 50, lastUpdate: Date.now() });
+                setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), pandaData);
             }
         }));
     }
@@ -412,6 +501,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
             if(targetGoal) {
                 await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
+                
+                // 🐼 GAIN DE PIÈCES SI ON ÉPARGNE !
+                pandaData.coins += 50; savePandaState();
+                
                 if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
             }
         } 
