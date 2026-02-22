@@ -22,7 +22,6 @@ const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2";
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 🛠️ SYSTÈME DE POP-UP PERSONNALISÉ ---
     function customAlert(message, title = "Information") {
         return new Promise((resolve) => {
             const overlay = document.getElementById('custom-dialog-overlay');
@@ -67,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
     const viewSubs = document.getElementById('view-subscriptions');
-    const navItems = document.querySelectorAll('.nav-item');
 
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
@@ -81,12 +79,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingExpenseId = null; 
     let deferredPrompt; 
 
-    // --- 🐼 TAMAGOTCHI PANDA GÉANT ---
+    // --- 🐼 LE NOUVEAU TAMAGOTCHI PANDA ---
     let pandaLove = 50;
     let pandaHunger = 50;
     let pandaWriteTimeout = null;
-    let pandaPetAccumulator = 0;
-    let pandaLastX = null;
 
     function checkPandaVisibility() {
         const theme = localStorage.getItem('budgetTheme') || 'light';
@@ -98,12 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    document.getElementById('panda-trigger-btn')?.addEventListener('click', () => {
-        document.getElementById('modal-panda-game').style.display = 'flex';
-    });
-    document.getElementById('btn-close-panda')?.addEventListener('click', () => {
-        document.getElementById('modal-panda-game').style.display = 'none';
-    });
+    document.getElementById('panda-trigger-btn')?.addEventListener('click', () => { document.getElementById('modal-panda-game').style.display = 'flex'; });
+    document.getElementById('btn-close-panda')?.addEventListener('click', () => { document.getElementById('modal-panda-game').style.display = 'none'; });
 
     function updatePandaUI() {
         document.getElementById('panda-love-text').innerText = pandaLove + '%';
@@ -114,47 +106,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function spawnHeart(x, y) {
         const heart = document.createElement('div');
-        heart.innerText = '❤️';
-        heart.style.position = 'fixed';
-        heart.style.left = (x - 10) + 'px';
-        heart.style.top = (y - 10) + 'px';
-        heart.style.fontSize = '24px';
-        heart.style.pointerEvents = 'none';
-        heart.style.zIndex = '4000';
+        heart.innerText = '❤️'; heart.style.position = 'fixed'; heart.style.left = (x - 10) + 'px'; heart.style.top = (y - 10) + 'px'; heart.style.fontSize = '24px'; heart.style.pointerEvents = 'none'; heart.style.zIndex = '4000';
         document.body.appendChild(heart);
         const anim = heart.animate([{ transform: 'translateY(0) scale(1)', opacity: 1 }, { transform: 'translateY(-100px) scale(1.5)', opacity: 0 }], { duration: 1000, easing: 'ease-out' });
         anim.onfinish = () => heart.remove();
     }
 
-    function handlePandaPet(clientX, clientY) {
-        if(pandaLastX !== null) {
-            pandaPetAccumulator += Math.abs(clientX - pandaLastX);
-            if(pandaPetAccumulator > 80) { 
-                pandaPetAccumulator = 0;
-                spawnHeart(clientX, clientY);
-                if(pandaLove < 100) {
-                    pandaLove++;
-                    updatePandaUI();
-                    clearTimeout(pandaWriteTimeout);
-                    pandaWriteTimeout = setTimeout(() => { updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: pandaLove, lastUpdate: Date.now() }); }, 1000);
-                }
-            }
+    // Le clic pour faire un câlin
+    document.getElementById('interactive-panda')?.addEventListener('click', (e) => {
+        const panda = document.getElementById('css-panda');
+        
+        // Ajoute la classe happy pour plisser les yeux et bouger les oreilles
+        panda.classList.add('happy');
+        setTimeout(() => panda.classList.remove('happy'), 800);
+
+        spawnHeart(e.clientX, e.clientY);
+
+        if(pandaLove < 100) {
+            pandaLove = Math.min(100, pandaLove + 5);
+            updatePandaUI();
+            clearTimeout(pandaWriteTimeout);
+            pandaWriteTimeout = setTimeout(() => { updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: pandaLove, lastUpdate: Date.now() }); }, 1500);
         }
-        pandaLastX = clientX;
-    }
+    });
 
-    const interactivePanda = document.getElementById('interactive-panda');
-    interactivePanda?.addEventListener('mousemove', (e) => handlePandaPet(e.clientX, e.clientY));
-    interactivePanda?.addEventListener('touchmove', (e) => { e.preventDefault(); handlePandaPet(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-    interactivePanda?.addEventListener('mouseleave', () => pandaLastX = null);
-    interactivePanda?.addEventListener('touchend', () => pandaLastX = null);
-
+    // Le bouton Nourrir
     document.getElementById('btn-feed-panda')?.addEventListener('click', () => {
-        if(pandaHunger >= 100) return customAlert("Il n'a plus faim pour le moment, il a le ventre plein ! 🐼");
+        if(pandaHunger >= 100) return customAlert("Il n'a plus faim pour le moment, il a le ventre plein ! 🐼", "Repu !");
+        
+        const panda = document.getElementById('css-panda');
+        panda.classList.add('eating'); // Fait mastiquer la tête
+        
+        // Fait tomber un bambou
+        const bamboo = document.createElement('div');
+        bamboo.innerText = '🎋';
+        bamboo.className = 'bamboo-drop';
+        bamboo.style.left = '80px';
+        document.getElementById('interactive-panda').appendChild(bamboo);
+
+        setTimeout(() => {
+            panda.classList.remove('eating');
+            bamboo.remove();
+        }, 1000);
+
         pandaHunger = Math.min(100, pandaHunger + 15);
         updatePandaUI();
         updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { hunger: pandaHunger, lastUpdate: Date.now() });
-        customAlert("Miam miam ! Merci pour le bambou 🎋");
     });
 
 
@@ -202,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
     document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now() }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
 
-    // --- NAVIGATION (SYNCRO PC ET MOBILE) ---
     function switchView(viewElement, navId, bnavId) {
         viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none';
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
@@ -227,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
     document.getElementById('bnav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
 
-    // --- FEEDBACK & QUICK ADD MODALS ---
     document.getElementById('btn-open-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); } });
     document.getElementById('btn-close-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'none'; });
     document.getElementById('feedback-form')?.addEventListener('submit', async(e) => { e.preventDefault(); await addDoc(collection(db, "feedbacks"), { text: document.getElementById('feedback-text').value, user: auth.currentUser.email, date: Date.now() }); document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; customAlert("Merci pour votre retour !", "Message envoyé"); });
@@ -244,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- CALENDRIER LOGIQUE ---
     function checkReminders() {
         if(reminderPopupShown) return; const todayTime = new Date().setHours(0,0,0,0); let upcoming = [];
         eventsData.forEach(ev => { if (ev.reminder > 0) { const evTime = new Date(ev.dateStart || ev.date).setHours(0,0,0,0); const diffDays = (evTime - todayTime) / (1000 * 3600 * 24); if (diffDays >= 0 && diffDays <= ev.reminder) upcoming.push({ ...ev, diffDays }); } });
@@ -294,12 +288,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.reset(); customAlert("Événement ajouté au calendrier !", "Succès"); 
     });
 
-    // --- BOUTONS DASHBOARD ---
     document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => { showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'block' : 'none'; e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)'; updateUI(); });
     document.getElementById('btn-toggle-annual')?.addEventListener('click', (e) => { showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none'; e.target.style.background = showAnnual ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showAnnual ? '#fff' : 'var(--text)'; updateUI(); });
     document.getElementById('btn-toggle-admin')?.addEventListener('click', () => { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; });
 
-    // --- RENDU UI DASHBOARD ---
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
         list.innerHTML = ""; const m = parseInt(document.getElementById('filter-month').value); const y = parseInt(document.getElementById('filter-year').value);
@@ -371,14 +363,12 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); checkReminders(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), s => { subsData = []; s.forEach(doc => subsData.push({ id: doc.id, ...doc.data() })); renderSubs(); }));
         
-        // --- CHARGEMENT DU TAMAGOTCHI ---
+        // 🐼 CHARGEMENT DU TAMAGOTCHI 🐼
         unsubscribers.push(onSnapshot(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), (d) => {
             if(d.exists()) {
                 const p = d.data();
                 const now = Date.now();
                 const daysPassed = (now - p.lastUpdate) / (1000 * 60 * 60 * 24);
-                
-                // Si ça fait plus d'1 jour, on baisse les stats (10 points perdus par jour d'absence)
                 if(daysPassed >= 1) {
                     const decay = Math.floor(daysPassed) * 10;
                     pandaLove = Math.max(0, p.love - decay);
@@ -389,7 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updatePandaUI();
                 }
             } else {
-                // Création initiale du Panda pour ce foyer
                 setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/pet`, "panda"), { love: 50, hunger: 50, lastUpdate: Date.now() });
             }
         }));
@@ -498,13 +487,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('theme-selector')?.addEventListener('change', (e) => { 
         document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`; 
         localStorage.setItem('budgetTheme', e.target.value); 
-        checkPandaVisibility(); // Vérifie s'il faut afficher la bulle du Panda
+        checkPandaVisibility();
     });
     
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
     document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
     
-    // Application du thème au chargement initial
     const savedTheme = localStorage.getItem('budgetTheme') || 'light';
     if(savedTheme !== 'light') { document.body.className = `theme-${savedTheme}`; }
     const tSel = document.getElementById('theme-selector'); if(tSel) tSel.value = savedTheme;
