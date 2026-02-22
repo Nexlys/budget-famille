@@ -150,18 +150,6 @@
     </div>
 </div>
 
-<div id="modal-adjust-balance" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.7);">
-    <div class="auth-box" style="position:relative;">
-        <button id="btn-close-adjust" style="position:absolute; top:-10px; right:10px; background:none; color:var(--text); font-size:1.5em; width:auto; border:none; margin:0; padding:0;">✕</button>
-        <h2 style="color: var(--primary); margin-top:0;">⚖️ Ajuster le solde</h2>
-        <p style="font-size:0.9em; color:#666;">Entrez le solde <b>exact</b> affiché sur votre application bancaire. Nous ferons la correction mathématique automatiquement.</p>
-        <form id="adjust-balance-form">
-            <input type="number" id="real-balance-input" placeholder="Solde réel en €" step="0.01" required style="text-align:center; font-size:1.2em; font-weight:bold;">
-            <button type="submit" style="background:var(--secondary); color:#333;">Corriger le solde</button>
-        </form>
-    </div>
-</div>
-
 <div id="modal-feedback" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.7);">
     <div class="auth-box" style="position:relative;">
         <button id="btn-close-feedback" style="position:absolute; top:-10px; right:10px; background:none; color:var(--text); font-size:1.5em; width:auto; border:none; margin:0; padding:0;">✕</button>
@@ -197,7 +185,14 @@
         <h3 id="auth-title">Connexion</h3>
         <form id="login-form">
             <input type="email" id="auth-email" required placeholder="Adresse email">
-            <input type="password" id="auth-password" required placeholder="Mot de passe">
+            
+            <div style="position:relative;">
+                <input type="password" id="auth-password" required placeholder="Mot de passe" style="padding-right: 40px;">
+                <span id="toggle-password" style="position:absolute; right:12px; top:20px; cursor:pointer; font-size:1.2em; user-select:none;">👁️</span>
+            </div>
+            
+            <span id="auth-forgot-pwd" style="display:block; text-align:right; font-size:0.85em; color:var(--primary); cursor:pointer; margin-top:8px; margin-bottom:15px; font-weight:500;">Mot de passe oublié ?</span>
+
             <button type="submit" id="auth-submit-btn">Se connecter</button>
         </form>
         <p id="auth-error" style="color:#E74C3C; display:none; font-size:0.85em; margin-top:15px; font-weight:bold;"></p>
@@ -337,6 +332,12 @@
             </div>
             <p id="profile-success" style="color:#2ecc71; font-size:0.85em; display:none; margin:10px 0 0 0; font-weight: bold;">✓ Mis à jour !</p>
         </div>
+
+        <div class="card" id="install-app-card" style="display:none; margin-top:25px; border:2px solid var(--primary); background:rgba(74, 144, 226, 0.05);">
+            <h3 style="margin-top:0; color:var(--primary);">📱 Installer l'application</h3>
+            <p style="font-size:0.9em; color:var(--text);">Ajoutez Budget Duo à votre écran d'accueil pour y accéder plus rapidement comme une vraie application !</p>
+            <button id="btn-install-pwa" style="background:var(--primary); color:#fff; width:100%;">Installer maintenant</button>
+        </div>
     </div>
 
     <div id="view-admin" style="display:none;">
@@ -431,13 +432,7 @@
         <div class="grid-stats">
             <div class="card">
                 <div class="card-header"><h3>💰 Solde restant</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
-                <div class="card-content">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span id="solde-actuel" class="balance">0.00 €</span>
-                        <button id="btn-open-adjust" style="background:none; border:none; cursor:pointer; font-size:1.2em; color:#888; padding:0; width:auto; margin:0;" title="Ajuster le solde au montant réel">✏️</button>
-                    </div>
-                    <p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p>
-                </div>
+                <div class="card-content"><span id="solde-actuel" class="balance">0.00 €</span><p style="font-size:0.85em; margin:0; color:#666;">Revenus : <span id="total-revenus" style="color:#2ecc71; font-weight:bold;">0€</span></p></div>
             </div>
             <div class="card">
                 <div class="card-header"><h3>📊 Dépenses totales</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
@@ -453,7 +448,7 @@
 
         <div class="layout-split" style="margin-top:25px;">
             <div class="card">
-                <div class="card-header"><h3>➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
+                <div class="card-header"><h3 id="form-expense-title">➕ Nouvelle Opération</h3><button type="button" class="toggle-card-btn" title="Réduire">➖</button></div>
                 <div class="card-content">
                     <form id="expense-form">
                         <div class="transaction-type-toggle">
@@ -463,7 +458,7 @@
                         <input type="text" id="desc" placeholder="Description (Ex: Courses)" required><input type="number" id="amount" placeholder="Montant en €" step="0.01" required>
                         <select id="payer" required></select><select id="category" required></select>
                         <div id="goal-selector-group" style="display:none;"><select id="goal-selector"></select></div>
-                        <button type="submit">Enregistrer l'opération</button>
+                        <button type="submit" id="btn-submit-expense">Enregistrer l'opération</button>
                     </form>
                 </div>
             </div>
