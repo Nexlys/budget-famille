@@ -64,7 +64,7 @@
 
         .balance { font-size: 1.8em; font-weight: bold; margin: 10px 0; display: block;}
         
-        input:not([type="checkbox"]):not([type="radio"]), select { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); }
+        input:not([type="checkbox"]):not([type="radio"]), select, textarea { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); font-family:inherit; }
         button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; transition: 0.2s; }
         button:hover { opacity: 0.9; }
         .btn-small { width: auto !important; margin: 0 !important; padding: 10px 15px !important; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; }
@@ -105,7 +105,15 @@
         .badge-exp { background: #e74c3c; } .badge-inc { background: #2ecc71; }
         .badge-perso { background: #4A90E2; } .badge-pro { background: #9b59b6; }
         .badge-important { border-left: 4px solid #f1c40f; font-weight: bold; }
+
+        /* NOUVEAU : BOUTON SAISIE RAPIDE (FAB) */
+        .fab-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; font-size: 2em; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 1500; border: none; transition: 0.2s; }
+        .fab-btn:hover { transform: scale(1.1); }
         
+        /* BANNIÈRE D'ANNONCE */
+        #global-announcement { display:none; background:#e74c3c; color:white; padding:12px; text-align:center; font-weight:bold; width:100%; border-radius:8px; margin-bottom:20px; animation: slideDown 0.5s ease; }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .sidebar.mobile-open { transform: translateX(0); }
@@ -117,6 +125,7 @@
             .action-bar > select, .action-bar > button { width: 100% !important; margin-bottom: 5px !important; }
             .action-bar-spacer { display: none; }
             .calendar-day { min-height: 60px; font-size: 0.7em; }
+            .fab-btn { bottom: 20px; right: 20px; width: 55px; height: 55px; }
         }
     </style>
 </head>
@@ -124,7 +133,38 @@
 
 <div id="mobile-overlay" class="mobile-overlay"></div>
 
-<div id="screen-maintenance" class="fullscreen-overlay" style="display:none; z-index: 3000;">
+<button id="fab-quick-add" class="fab-btn" style="display:none;" title="Saisie rapide">＋</button>
+
+<div id="modal-quick-add" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.7);">
+    <div class="auth-box" style="position:relative;">
+        <button id="btn-close-quick-add" style="position:absolute; top:-10px; right:10px; background:none; color:var(--text); font-size:1.5em; width:auto; border:none; margin:0; padding:0;">✕</button>
+        <h2 style="color: var(--primary); margin-top:0;">⚡ Saisie Rapide</h2>
+        <form id="quick-expense-form">
+            <div class="transaction-type-toggle">
+                <label class="radio-label"><input type="radio" name="quick-trans-type" value="expense" checked><span class="radio-btn">📉 Dépense</span></label>
+                <label class="radio-label"><input type="radio" name="quick-trans-type" value="income"><span class="radio-btn">📈 Revenu</span></label>
+            </div>
+            <input type="text" id="quick-desc" placeholder="Quoi ? (Ex: Boulangerie)" required>
+            <input type="number" id="quick-amount" placeholder="Combien ? (€)" step="0.01" required>
+            <select id="quick-category" required></select>
+            <button type="submit">Valider</button>
+        </form>
+    </div>
+</div>
+
+<div id="modal-feedback" class="fullscreen-overlay" style="display:none; z-index: 3000; background: rgba(0,0,0,0.7);">
+    <div class="auth-box" style="position:relative;">
+        <button id="btn-close-feedback" style="position:absolute; top:-10px; right:10px; background:none; color:var(--text); font-size:1.5em; width:auto; border:none; margin:0; padding:0;">✕</button>
+        <h2 style="color: var(--primary); margin-top:0;">💡 Une idée ? Un bug ?</h2>
+        <p style="font-size:0.9em; color:#666;">Envoyez votre message directement à l'administrateur !</p>
+        <form id="feedback-form">
+            <textarea id="feedback-text" rows="4" placeholder="Décrivez votre idée ou le problème rencontré..." required></textarea>
+            <button type="submit">Envoyer le message</button>
+        </form>
+    </div>
+</div>
+
+<div id="screen-maintenance" class="fullscreen-overlay" style="display:none; z-index: 4000;">
     <div class="auth-box" style="border: 3px dashed #f39c12; background: var(--card-bg);">
         <h1 style="font-size: 3.5em; margin: 0 0 10px 0;">🛠️</h1>
         <h2 style="color: #f39c12; margin-top:0;">Maintenance en cours</h2>
@@ -170,8 +210,10 @@
     <h2>💎 Budget Duo</h2>
     <ul class="nav-menu">
         <li id="nav-dashboard" class="nav-item active">📊 Dashboard</li>
+        <li id="nav-subs" class="nav-item">🔁 Frais Fixes</li>
         <li id="nav-calendar" class="nav-item">📅 Calendrier</li>
         <li id="nav-profile" class="nav-item">👤 Mon Profil</li>
+        <li id="btn-open-feedback" class="nav-item" style="color:var(--secondary); margin-top:15px; background:rgba(255,255,255,0.05);">💡 Feedback</li>
         <li id="nav-admin" class="nav-item" style="display:none; background:#d35400; color:white; margin-top:20px;">👑 Administration</li>
     </ul>
     <div class="sidebar-footer">
@@ -183,7 +225,7 @@
     <div class="top-header">
         <button id="toggle-sidebar" class="toggle-sidebar-btn">☰</button>
         <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:0.75em; color:#2ecc71; font-weight: bold; white-space: nowrap;">● Connecté</span>
+            <span id="status-indicator" style="font-size:0.75em; color:#2ecc71; font-weight: bold; white-space: nowrap;">● Connecté</span>
             <select id="theme-selector">
                 <option value="light">☀️ Clair</option>
                 <option value="dark">🌙 Sombre</option>
@@ -191,6 +233,30 @@
                 <option value="panda-geant">🐼 Panda Géant</option>
                 <option value="panda-roux">🦊 Panda Roux</option>
             </select>
+        </div>
+    </div>
+
+    <div id="global-announcement"></div>
+
+    <div id="view-subscriptions" style="display:none;">
+        <h2 style="color:var(--primary); margin-top:0;">🔁 Abonnements & Frais Fixes</h2>
+        <div class="layout-split">
+            <div class="card">
+                <h3 style="margin-top:0;">➕ Ajouter un abonnement</h3>
+                <form id="sub-form">
+                    <input type="text" id="sub-name" placeholder="Nom (Ex: Netflix, Loyer)" required>
+                    <input type="number" id="sub-amount" placeholder="Montant mensuel (€)" step="0.01" required>
+                    <select id="sub-category" required></select>
+                    <label style="font-size:0.85em; font-weight:bold; display:block; margin-top:10px;">Prélevé le :</label>
+                    <input type="number" id="sub-day" placeholder="Jour du mois (1-31)" min="1" max="31" required>
+                    <button type="submit">Enregistrer l'abonnement</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3 style="margin-top:0;">Mes Frais Fixes</h3>
+                <p style="font-size:0.9em; color:#666;">Total estimé : <strong id="total-subs-amount" style="color:#e74c3c;">0.00 €</strong> / mois</p>
+                <ul id="subs-list" style="list-style:none; padding:0; margin-top:15px;"></ul>
+            </div>
         </div>
     </div>
 
@@ -205,10 +271,7 @@
                 </div>
                 <div style="margin-bottom:15px; background:var(--bg); padding:12px; border-radius:8px;">
                     <label class="switch-container">
-                        <div class="switch">
-                            <input type="checkbox" id="cal-show-expenses" checked>
-                            <span class="slider"></span>
-                        </div>
+                        <div class="switch"><input type="checkbox" id="cal-show-expenses" checked><span class="slider"></span></div>
                         <span style="font-size: 0.95em; font-weight: 500;">💰 Afficher les transactions</span>
                     </label>
                 </div>
@@ -271,30 +334,50 @@
         <p style="color:#666;">Vue restreinte. Vous seul avez accès à ces données.</p>
         
         <div class="card" style="border-top: 4px solid #f39c12; margin-bottom: 25px; background: rgba(243, 156, 18, 0.05);">
-            <h3 style="margin-top:0; color:#d35400;">🛠️ Contrôle de la Maintenance</h3>
-            <p style="font-size:0.85em; color:var(--text);">Activez ce mode pour expulser immédiatement tous les utilisateurs. En tant qu'Administrateur, vous ne serez pas déconnecté.</p>
-            <label class="switch-container" style="color:#d35400; font-weight:bold; margin-top:15px;">
-                <div class="switch switch-important">
-                    <input type="checkbox" id="admin-maintenance-toggle">
-                    <span class="slider"></span>
-                </div>
-                <span>Activer la Maintenance Globale</span>
+            <h3 style="margin-top:0; color:#d35400;">📢 Annonce Globale</h3>
+            <input type="text" id="admin-announcement-input" placeholder="Message à afficher à tous les utilisateurs..." style="margin-bottom:10px;">
+            <button id="btn-admin-announce" class="btn-small" style="background:#f39c12; color:white; border:none; padding:10px 20px;">Publier l'annonce</button>
+            
+            <hr style="border:none; border-top:1px dashed #d35400; margin:20px 0;">
+            <h3 style="margin-top:0; color:#d35400;">🛠️ Mode Maintenance</h3>
+            <label class="switch-container" style="color:#d35400; font-weight:bold;">
+                <div class="switch switch-important"><input type="checkbox" id="admin-maintenance-toggle"><span class="slider"></span></div>
+                <span>Activer (Expulse tout le monde)</span>
             </label>
         </div>
 
-        <div class="grid-stats">
-            <div class="card" style="border-top: 4px solid #3498db;"><h3>👥 Total Utilisateurs</h3><span id="admin-tot-users" class="balance">0</span></div>
-            <div class="card" style="border-top: 4px solid #2ecc71;"><h3>🏠 Foyers Actifs</h3><span id="admin-tot-budgets" class="balance">0</span></div>
+        <div class="card" style="border-top: 4px solid #9b59b6; margin-bottom: 25px; background: rgba(155, 89, 182, 0.05);">
+            <h3 style="margin-top:0; color:#8e44ad;">👁️ Mode Fantôme (Support)</h3>
+            <p style="font-size:0.85em;">Visualisez le budget d'un utilisateur pour l'aider.</p>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="admin-ghost-id" placeholder="ID du Foyer à infiltrer..." style="flex:1;">
+                <button id="btn-ghost-mode" class="btn-small" style="background:#8e44ad; color:white;">Infiltrer</button>
+            </div>
         </div>
+
+        <div class="grid-stats">
+            <div class="card" style="border-top: 4px solid #3498db;"><h3>👥 Utilisateurs Inscrits</h3><span id="admin-tot-users" class="balance">0</span></div>
+            <div class="card" style="border-top: 4px solid #2ecc71;"><h3>🔥 Actifs (7 jours)</h3><span id="admin-active-users" class="balance" style="color:#2ecc71;">0</span></div>
+            <div class="card" style="border-top: 4px solid #e67e22;"><h3>🏠 Foyers Actifs</h3><span id="admin-tot-budgets" class="balance">0</span></div>
+        </div>
+
+        <div class="card" style="margin-top:25px; overflow-x:auto;">
+            <h3 style="margin-top:0;">💡 Feedbacks & Idées Utilisateurs</h3>
+            <table style="min-width: 400px; font-size:0.85em;">
+                <thead style="background:rgba(0,0,0,0.05);"><tr><th>Date</th><th>Utilisateur</th><th>Message</th><th>Actions</th></tr></thead>
+                <tbody id="admin-feedback-list"></tbody>
+            </table>
+        </div>
+
         <div class="layout-split" style="margin-top:25px;">
             <div class="card" style="overflow-x:auto;">
                 <h3 style="margin-top:0;">Base Utilisateurs</h3>
-                <input type="text" id="search-admin-users" placeholder="🔍 Rechercher (Email, ID...)" style="margin-top:0; margin-bottom:15px;">
-                <table style="min-width: 400px; font-size:0.85em;"><thead style="background:rgba(0,0,0,0.05);"><tr><th>Email</th><th>ID User</th><th>ID Foyer</th><th>Actions</th></tr></thead><tbody id="admin-user-list"></tbody></table>
+                <input type="text" id="search-admin-users" placeholder="🔍 Rechercher..." style="margin-top:0; margin-bottom:15px;">
+                <table style="min-width: 400px; font-size:0.85em;"><thead style="background:rgba(0,0,0,0.05);"><tr><th>Email</th><th>Dernière Co.</th><th>ID Foyer</th><th>Actions</th></tr></thead><tbody id="admin-user-list"></tbody></table>
             </div>
             <div class="card" style="overflow-x:auto;">
                 <h3 style="margin-top:0;">Gestion des Foyers</h3>
-                <input type="text" id="search-admin-budgets" placeholder="🔍 Rechercher (Code, ID...)" style="margin-top:0; margin-bottom:15px;">
+                <input type="text" id="search-admin-budgets" placeholder="🔍 Rechercher..." style="margin-top:0; margin-bottom:15px;">
                 <table style="min-width: 400px; font-size:0.85em;"><thead style="background:rgba(0,0,0,0.05);"><tr><th>Code</th><th>Créateur (ID)</th><th>Actions</th></tr></thead><tbody id="admin-budget-list"></tbody></table>
             </div>
         </div>
