@@ -22,7 +22,6 @@ const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2";
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 🛠️ SYSTÈME DE POP-UP PERSONNALISÉ ---
     function customAlert(message, title = "Information") {
         return new Promise((resolve) => {
             const overlay = document.getElementById('custom-dialog-overlay');
@@ -41,20 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('custom-dialog-title').innerText = title;
             document.getElementById('custom-dialog-msg').innerHTML = message;
             const btnContainer = document.getElementById('custom-dialog-btns');
-            btnContainer.innerHTML = `
-                <button id="btn-dialog-cancel" class="btn-small" style="background:var(--bg); color:var(--text); flex:1;">Annuler</button>
-                <button id="btn-dialog-confirm" style="background:var(--danger); flex:1;">Confirmer</button>
-            `;
+            btnContainer.innerHTML = `<button id="btn-dialog-cancel" class="btn-small" style="background:var(--bg); color:var(--text); flex:1;">Annuler</button><button id="btn-dialog-confirm" style="background:var(--danger); flex:1;">Confirmer</button>`;
             overlay.style.display = 'flex';
             document.getElementById('btn-dialog-cancel').onclick = () => { overlay.style.display = 'none'; resolve(false); };
             document.getElementById('btn-dialog-confirm').onclick = () => { overlay.style.display = 'none'; resolve(true); };
         });
     }
 
-    // Initialisation des dates (Aujourd'hui par défaut)
     const todayISO = new Date().toISOString().split('T')[0];
     if(document.getElementById('expense-date')) document.getElementById('expense-date').value = todayISO;
-    if(document.getElementById('quick-date')) document.getElementById('quick-date').value = todayISO;
 
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
@@ -67,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const screenApp = document.getElementById('screen-app');
 
     const viewDashboard = document.getElementById('view-dashboard');
+    const viewBudget = document.getElementById('view-budget'); // NOUVEAU
     const viewProfile = document.getElementById('view-profile');
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
@@ -79,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDataLoaded = false;
     let goals = [], expenses = [], customCategories = [], members = [], eventsData = [], subsData = [];
     let myChart = null, myAnnualChart = null, currentSearch = "";
-    let showAnnual = false, showEnvelopes = false;
     let calMonth = new Date().getMonth(); let calYear = new Date().getFullYear();
     let reminderPopupShown = false;
     let isMaintenance = false; let currentUserObj = null;
@@ -130,9 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
     document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now() }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
 
-    // --- NAVIGATION (SYNCRO PC ET MOBILE) ---
+    // --- NAVIGATION ---
     function switchView(viewElement, navId, bnavId) {
-        viewDashboard.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; 
+        viewDashboard.style.display = 'none'; viewBudget.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; 
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
         viewElement.style.display = 'block';
         if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
@@ -144,23 +138,37 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleBtn?.addEventListener('click', () => { if (window.innerWidth <= 850) { sidebar.classList.toggle('mobile-open'); if (mobileOverlay) mobileOverlay.classList.toggle('active'); } else { sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded'); } });
     mobileOverlay?.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); });
 
-    document.getElementById('nav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-quick-add').style.display='flex'; });
-    document.getElementById('nav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-quick-add').style.display='none';});
-    document.getElementById('nav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
-    document.getElementById('nav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
-    document.getElementById('nav-admin')?.addEventListener('click', () => { switchView(viewAdmin, 'nav-admin', null); document.getElementById('fab-quick-add').style.display='none'; loadAdminData(); });
+    document.getElementById('nav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-add-expense').style.display='flex'; });
+    document.getElementById('nav-budget')?.addEventListener('click', () => { switchView(viewBudget, 'nav-budget', 'bnav-budget'); document.getElementById('fab-add-expense').style.display='none'; renderAnnualChart(); });
+    document.getElementById('nav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-add-expense').style.display='none';});
+    document.getElementById('nav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-add-expense').style.display='none'; renderCalendar(); });
+    document.getElementById('nav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-add-expense').style.display='none'; renderSubs(); });
+    document.getElementById('nav-admin')?.addEventListener('click', () => { switchView(viewAdmin, 'nav-admin', null); document.getElementById('fab-add-expense').style.display='none'; loadAdminData(); });
     
-    document.getElementById('bnav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-quick-add').style.display='flex'; });
-    document.getElementById('bnav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-quick-add').style.display='none';});
-    document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-quick-add').style.display='none'; renderCalendar(); });
-    document.getElementById('bnav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-quick-add').style.display='none'; renderSubs(); });
+    document.getElementById('bnav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-add-expense').style.display='flex'; });
+    document.getElementById('bnav-budget')?.addEventListener('click', () => { switchView(viewBudget, 'nav-budget', 'bnav-budget'); document.getElementById('fab-add-expense').style.display='none'; renderAnnualChart(); });
+    document.getElementById('bnav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-add-expense').style.display='none';});
+    document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-add-expense').style.display='none'; renderCalendar(); });
+    document.getElementById('bnav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-add-expense').style.display='none'; renderSubs(); });
 
+    // BOUTON FEEDBACK (Maintenant dans la sidebar ou le profil)
     document.getElementById('btn-open-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); } });
+    document.getElementById('btn-open-feedback-page')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; });
     document.getElementById('btn-close-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'none'; });
     document.getElementById('feedback-form')?.addEventListener('submit', async(e) => { e.preventDefault(); await addDoc(collection(db, "feedbacks"), { text: document.getElementById('feedback-text').value, user: auth.currentUser.email, date: Date.now() }); document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; customAlert("Merci pour votre retour !", "Message envoyé"); });
 
-    document.getElementById('fab-quick-add')?.addEventListener('click', () => { document.getElementById('quick-date').value = new Date().toISOString().split('T')[0]; document.getElementById('modal-quick-add').style.display = 'flex'; });
-    document.getElementById('btn-close-quick-add')?.addEventListener('click', () => { document.getElementById('modal-quick-add').style.display = 'none'; });
+    // BOUTON + FLOTTANT (FAB) OUVRE LA MODALE DE DEPENSE
+    document.getElementById('fab-add-expense')?.addEventListener('click', () => { 
+        document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
+        document.getElementById('modal-expense').style.display = 'flex'; 
+    });
+    document.getElementById('btn-close-expense-modal')?.addEventListener('click', () => { 
+        document.getElementById('modal-expense').style.display = 'none'; 
+        editingExpenseId = null; // Reset if closed during edit
+        document.getElementById('expense-form').reset();
+        document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
+        document.getElementById('btn-submit-expense').innerText = "Ajouter";
+    });
     
     function fireConfetti() {
         const colors = ['#D4A373', '#CCD5AE', '#E07A5F', '#81B29A', '#F2CC8F'];
@@ -211,7 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
             cellHTML += `</div>`; grid.innerHTML += cellHTML;
         }
     }
-    document.getElementById('ev-date-start')?.addEventListener('change', (e) => { const endInput = document.getElementById('ev-date-end'); if (!endInput.value || new Date(endInput.value) < new Date(e.target.value)) { endInput.value = e.target.value; } });
     
     document.getElementById('event-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); const dStart = document.getElementById('ev-date-start').value; const dEnd = document.getElementById('ev-date-end').value;
@@ -219,10 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), { dateStart: dStart, timeStart: document.getElementById('ev-time-start').value || "", dateEnd: dEnd, timeEnd: document.getElementById('ev-time-end').value || "", title: document.getElementById('ev-title').value, type: document.getElementById('ev-type').value, important: document.getElementById('ev-important').checked, reminder: parseInt(document.getElementById('ev-reminder').value) }); 
         e.target.reset(); customAlert("Événement ajouté au calendrier !", "Succès"); 
     });
-
-    document.getElementById('btn-toggle-envelopes')?.addEventListener('click', (e) => { showEnvelopes = !showEnvelopes; document.getElementById('envelopes-section').style.display = showEnvelopes ? 'block' : 'none'; e.target.style.background = showEnvelopes ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showEnvelopes ? '#fff' : 'var(--text)'; updateUI(); });
-    document.getElementById('btn-toggle-annual')?.addEventListener('click', (e) => { showAnnual = !showAnnual; document.getElementById('annual-section').style.display = showAnnual ? 'block' : 'none'; e.target.style.background = showAnnual ? 'var(--primary)' : 'var(--card-bg)'; e.target.style.color = showAnnual ? '#fff' : 'var(--text)'; updateUI(); });
-    document.getElementById('btn-toggle-admin')?.addEventListener('click', () => { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; });
 
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
@@ -239,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
                 if(isInc) { rev += e.amount; memberStats[currentPayerId].rev += e.amount; } else { dep += e.amount; memberStats[currentPayerId].dep += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
                 const tr = document.createElement('tr'); 
-                tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small style="background:var(--bg); padding:4px 8px; border-radius:8px;">${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
+                tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small style="background:var(--bg); padding:6px 10px; border-radius:12px; font-weight:700;">${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
                 <td style="white-space:nowrap;">
                     <button class="duplicate-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Dupliquer">📋</button>
                     <button class="edit-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Modifier">✏️</button>
@@ -261,11 +264,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const ctx = document.getElementById('expenseChart')?.getContext('2d');
         if (ctx) { if (myChart) myChart.destroy(); myChart = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catSums), datasets: [{ data: Object.values(catSums), backgroundColor: ['#D4A373', '#CCD5AE', '#E07A5F', '#81B29A', '#F2CC8F'], borderWidth: 0 }] }, options: { plugins: { legend: { display: false } }, cutout: '75%' } }); }
-        if(showEnvelopes) renderEnvelopes(catSums); if(showAnnual) renderAnnualChart(); renderCalendar(); renderSubs();
+        
+        // Mise à jour des éléments visuels du menu BUDGET
+        renderEnvelopes(catSums); 
+        renderAnnualChart(); 
+        renderCalendar(); 
+        renderSubs();
     }
 
     function renderMembers() { const sel = document.getElementById('payer'); if(sel) { sel.innerHTML = ''; members.forEach(m => sel.appendChild(new Option(m.name, m.id))); if(auth.currentUser) sel.value = auth.currentUser.uid; } }
-    function renderCategories() { const sel = document.getElementById('category'); const qSel = document.getElementById('quick-category'); const sSel = document.getElementById('sub-category'); const list = document.getElementById('category-manage-list'); if(sel) { sel.innerHTML = '<option value="">-- Choisir une catégorie --</option>'; qSel.innerHTML = sel.innerHTML; sSel.innerHTML = sel.innerHTML; customCategories.forEach(c => { const opt = new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`); sel.appendChild(opt); qSel.appendChild(opt.cloneNode(true)); sSel.appendChild(opt.cloneNode(true)); }); } if(list) { list.innerHTML = ""; customCategories.forEach(c => { const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border-radius:12px; margin-bottom:8px;"; li.innerHTML = `<span style="font-weight:700;">${c.emoji} ${c.name}</span> <button class="delete-cat" data-id="${c.id}" style="width:auto; padding:6px 12px; margin:0; background:var(--danger); border-radius:10px;">✕</button>`; list.appendChild(li); }); } }
+    function renderCategories() { const sel = document.getElementById('category'); const sSel = document.getElementById('sub-category'); const list = document.getElementById('category-manage-list'); if(sel) { sel.innerHTML = '<option value="">-- Choisir une catégorie --</option>'; sSel.innerHTML = sel.innerHTML; customCategories.forEach(c => { const opt = new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`); sel.appendChild(opt); sSel.appendChild(opt.cloneNode(true)); }); } if(list) { list.innerHTML = ""; customCategories.forEach(c => { const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border-radius:12px; margin-bottom:8px;"; li.innerHTML = `<span style="font-weight:700;">${c.emoji} ${c.name}</span> <button class="delete-cat" data-id="${c.id}" style="width:auto; padding:6px 12px; margin:0; background:var(--danger); border-radius:10px; color:white;">✕</button>`; list.appendChild(li); }); } }
     function renderGoals() { const cont = document.getElementById('goals-container'); const sel = document.getElementById('goal-selector'); if(!cont || !sel) return; cont.innerHTML = ""; sel.innerHTML = '<option value="">-- Lier à un objectif --</option>'; goals.forEach(g => { const p = Math.min((g.current / g.target) * 100, 100); const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<h3>🎯 ${g.name}</h3><p style="font-weight:700; font-size:1.1em; opacity:0.8;">${g.current.toFixed(0)}€ <small>/ ${g.target}€</small></p><div class="progress-bar"><div class="progress-fill green" style="width:${p}%"></div></div>`; cont.appendChild(card); sel.appendChild(new Option(g.name, g.id)); }); }
     function renderEnvelopes(catSums) { const envContent = document.getElementById('envelopes-section-content'); if(!envContent) return; envContent.innerHTML = ''; const envelopeCats = customCategories.filter(c => c.limit && c.limit > 0); if (envelopeCats.length === 0) { envContent.innerHTML = '<p style="text-align:center; padding:20px; color:var(--text); opacity:0.6; font-weight:700;">✉️ Aucune enveloppe configurée.</p>'; return; } const gridDiv = document.createElement('div'); gridDiv.style.display = 'grid'; gridDiv.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))'; gridDiv.style.gap = '20px'; envelopeCats.forEach(cat => { const spent = catSums[`${cat.emoji} ${cat.name}`] || 0; const p = Math.min((spent / cat.limit) * 100, 100); const envDiv = document.createElement('div'); envDiv.style.background = 'var(--bg)'; envDiv.style.padding = '20px'; envDiv.style.borderRadius = '20px'; envDiv.innerHTML = `<h4 style="margin:0 0 10px 0; font-size:1.1em; color:var(--text);">${cat.emoji} ${cat.name}</h4><div style="display:flex; justify-content:space-between; font-size:1em; margin-bottom:8px;"><span style="font-weight:800;">${spent.toFixed(2)}€</span><span style="color:var(--text); opacity:0.6; font-weight:700;">/ ${cat.limit}€</span></div><div class="progress-bar" style="margin-top:0;"><div class="progress-fill ${p > 90 ? 'red' : (p > 70 ? 'orange' : 'green')}" style="width:${p}%"></div></div>`; gridDiv.appendChild(envDiv); }); envContent.appendChild(gridDiv); }
     function renderAnnualChart() { const ctx = document.getElementById('annualChart')?.getContext('2d'); if(!ctx) return; const monthlyData = new Array(12).fill(0).map(() => ({ inc: 0, exp: 0 })); expenses.filter(e => new Date(e.timestamp).getFullYear() === parseInt(document.getElementById('filter-year').value)).forEach(e => { const m = new Date(e.timestamp).getMonth(); if(e.type === 'income') monthlyData[m].inc += e.amount; else monthlyData[m].exp += e.amount; }); if(myAnnualChart) myAnnualChart.destroy(); 
@@ -288,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CHARGEMENT DATA FIREBASE ---
     function loadBudgetData() {
-        if(isDataLoaded) return; isDataLoaded = true; screenApp.style.display = 'block'; document.getElementById('fab-quick-add').style.display='flex';
+        if(isDataLoaded) return; isDataLoaded = true; screenApp.style.display = 'block'; document.getElementById('fab-add-expense').style.display='flex';
         getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(d => { if(d.exists()) document.getElementById('display-invite-code').innerText = d.data().code; });
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/members`), s => { members = []; s.forEach(doc => members.push({ id: doc.id, ...doc.data() })); const me = members.find(mbr => mbr.id === auth.currentUser.uid); if(me && document.getElementById('admin-pseudo')) document.getElementById('admin-pseudo').value = me.name; renderMembers(); updateUI(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => { expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); updateUI(); }));
@@ -320,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable ! Vérifiez avec votre partenaire.", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- FORMULAIRES DE DÉPENSES ---
+    // --- FORMULAIRE UNIQUE DE DÉPENSE ---
     async function saveExpense(type, amount, cat, desc, dateVal) {
         if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
             const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
@@ -336,38 +344,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if(editingExpenseId) {
             await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), { desc: desc, amount: amount, category: cat, type: type, payerId: document.getElementById('payer').value, date: frDate, timestamp: ts });
             editingExpenseId = null; 
-            const btnSubmit = document.getElementById('btn-submit-expense'); if(btnSubmit) { btnSubmit.innerText = "Ajouter l'opération"; btnSubmit.style.background = "var(--primary)"; }
-            document.getElementById('form-expense-title').innerText = "➕ Nouvelle Opération";
         } else {
             await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type }); 
         }
     }
 
-    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value, document.getElementById('expense-date').value); e.target.reset(); document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; document.getElementById('payer').value = auth.currentUser.uid; });
-    document.getElementById('quick-expense-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await saveExpense(document.querySelector('input[name="quick-trans-type"]:checked').value, parseFloat(document.getElementById('quick-amount').value), document.getElementById('quick-category').value, document.getElementById('quick-desc').value, document.getElementById('quick-date').value); e.target.reset(); document.getElementById('modal-quick-add').style.display = 'none'; });
+    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { 
+        e.preventDefault(); 
+        await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value, document.getElementById('expense-date').value); 
+        e.target.reset(); 
+        document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
+        document.getElementById('payer').value = auth.currentUser.uid; 
+        document.getElementById('modal-expense').style.display = 'none'; // Ferme la pop-up
+        
+        // Reset du titre du modal
+        document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
+        document.getElementById('btn-submit-expense').innerText = "Ajouter l'opération";
+    });
+
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
-    // --- GESTION DES CLICS MULTIPLES ---
+    // --- GESTION DES CLICS MULTIPLES (ÉDITION & DUPLICATION CENTRALISÉES) ---
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
         
+        // ✏️ ÉDITER (Ouvre la Pop-up Principale)
         if(e.target.classList.contains('edit-exp')) {
             const expId = e.target.dataset.id; const expToEdit = expenses.find(x => x.id === expId);
             if(expToEdit) {
-                editingExpenseId = expId; document.getElementById('desc').value = expToEdit.desc; document.getElementById('amount').value = expToEdit.amount; document.getElementById('category').value = expToEdit.category; document.getElementById('payer').value = expToEdit.payerId; document.querySelector(`input[name="trans-type"][value="${expToEdit.type}"]`).checked = true;
+                editingExpenseId = expId; 
+                document.getElementById('desc').value = expToEdit.desc; 
+                document.getElementById('amount').value = expToEdit.amount; 
+                document.getElementById('category').value = expToEdit.category; 
+                document.getElementById('payer').value = expToEdit.payerId; 
+                document.querySelector(`input[name="trans-type"][value="${expToEdit.type}"]`).checked = true;
                 if(expToEdit.timestamp) { document.getElementById('expense-date').value = new Date(expToEdit.timestamp).toISOString().split('T')[0]; }
-                const btnSubmit = document.getElementById('btn-submit-expense'); if(btnSubmit) { btnSubmit.innerText = "💾 Enregistrer la modification"; btnSubmit.style.background = "var(--secondary)"; btnSubmit.style.color = "var(--text)"; }
-                document.getElementById('form-expense-title').innerText = "✏️ Modifier l'opération"; document.getElementById('expense-form').scrollIntoView({behavior: "smooth"});
+                
+                document.getElementById('modal-expense-title').innerText = "✏️ Modifier l'opération"; 
+                document.getElementById('btn-submit-expense').innerText = "Enregistrer la modification";
+                document.getElementById('modal-expense').style.display = 'flex';
             }
         }
         
+        // 📋 DUPLIQUER (Ouvre la Pop-up Principale en mode création)
         if(e.target.classList.contains('duplicate-exp')) {
             const expId = e.target.dataset.id; const expToDup = expenses.find(x => x.id === expId);
             if(expToDup) {
-                document.getElementById('quick-desc').value = expToDup.desc; document.getElementById('quick-amount').value = expToDup.amount; document.getElementById('quick-category').value = expToDup.category; document.querySelector(`input[name="quick-trans-type"][value="${expToDup.type}"]`).checked = true;
-                document.getElementById('quick-date').value = new Date().toISOString().split('T')[0];
-                document.getElementById('modal-quick-add').style.display = 'flex';
+                editingExpenseId = null; // C'est une création !
+                document.getElementById('desc').value = expToDup.desc; 
+                document.getElementById('amount').value = expToDup.amount; 
+                document.getElementById('category').value = expToDup.category; 
+                document.querySelector(`input[name="trans-type"][value="${expToDup.type}"]`).checked = true;
+                document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui
+                
+                document.getElementById('modal-expense-title').innerText = "📋 Dupliquer l'opération"; 
+                document.getElementById('btn-submit-expense').innerText = "Ajouter";
+                document.getElementById('modal-expense').style.display = 'flex';
             }
         }
 
@@ -398,15 +431,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('toggle-proportional')?.addEventListener('change', (e) => { document.getElementById('expenseChart').style.display = e.target.checked ? 'none' : 'block'; document.getElementById('proportional-container').style.display = e.target.checked ? 'block' : 'none'; });
     document.getElementById('auth-toggle-mode')?.addEventListener('click', () => { const t = document.getElementById('auth-title'); const b = document.getElementById('auth-submit-btn'); const l = document.getElementById('auth-toggle-mode'); const isLog = t.innerText === "Connexion"; t.innerText = isLog ? "Inscription" : "Connexion"; b.innerText = isLog ? "Créer mon compte" : "Se connecter"; l.innerText = isLog ? "Déjà un compte ? Connexion" : "Pas encore de compte ? S'inscrire"; });
     
-    document.getElementById('theme-selector')?.addEventListener('change', (e) => { 
+    // THEME SELECTOR IS NOW IN SETTINGS (PROFILE)
+    document.getElementById('settings-theme-selector')?.addEventListener('change', (e) => { 
         document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`; 
         localStorage.setItem('budgetTheme', e.target.value); 
+        renderAnnualChart(); // Met à jour les couleurs du graphique
     });
     
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
+    document.getElementById('logout-btn-page')?.addEventListener('click', () => signOut(auth));
     document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
     
     const savedTheme = localStorage.getItem('budgetTheme') || 'light';
     if(savedTheme !== 'light') { document.body.className = `theme-${savedTheme}`; }
-    const tSel = document.getElementById('theme-selector'); if(tSel) tSel.value = savedTheme;
+    const tSel = document.getElementById('settings-theme-selector'); if(tSel) tSel.value = savedTheme;
 });
