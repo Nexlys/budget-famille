@@ -13,7 +13,6 @@ const firebaseConfig = {
   measurementId: "G-DJMM6FLJZN"
 };
 
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -22,7 +21,6 @@ const auth = getAuth(app);
 const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2"; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- ÉLÉMENTS UI ---
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
     const toggleBtn = document.getElementById('toggle-sidebar');
@@ -39,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewAdmin = document.getElementById('view-admin');
     const navItems = document.querySelectorAll('.nav-item');
 
-    // --- ÉTATS GLOBAUX ---
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
     let isDataLoaded = false;
@@ -52,12 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMaintenance = false;
     let currentUserObj = null;
 
-    // --- 🛡️ GESTION DU MODE MAINTENANCE (TEMPS RÉEL) ---
+    // --- 🛡️ GESTION DU MODE MAINTENANCE ---
     onSnapshot(doc(db, "settings", "system"), (d) => {
         isMaintenance = d.exists() ? (d.data().maintenance === true) : false;
         const toggle = document.getElementById('admin-maintenance-toggle');
         if(toggle) toggle.checked = isMaintenance;
-        renderAppState(); // Force la vérification visuelle immédiate
+        renderAppState(); 
     });
 
     document.getElementById('admin-maintenance-toggle')?.addEventListener('change', async (e) => {
@@ -65,34 +62,34 @@ document.addEventListener('DOMContentLoaded', () => {
         await setDoc(doc(db, "settings", "system"), { maintenance: e.target.checked }, { merge: true });
     });
 
-    // --- 👤 ÉTAT DE L'AUTHENTIFICATION ---
+    // 🔓 BOUTON SECRET (BYPASS) POUR L'ADMIN SUR L'ÉCRAN DE MAINTENANCE
+    document.getElementById('btn-admin-bypass')?.addEventListener('click', () => {
+        screenMaintenance.style.display = 'none';
+        screenAuth.style.display = 'flex';
+    });
+
     onAuthStateChanged(auth, async (user) => {
         currentUserObj = user;
         renderAppState();
     });
 
-    // 🚦 FONCTION MAITRESSE DE ROUTAGE DE L'ÉCRAN
     async function renderAppState() {
-        // 1. SI LA MAINTENANCE EST ACTIVE ET QUE CE N'EST PAS L'ADMIN : ON BLOQUE TOUT !
+        // Bloque si Maintenance ET (Non connecté OU Pas Admin)
         if (isMaintenance && (!currentUserObj || currentUserObj.uid !== ADMIN_UID)) {
             screenMaintenance.style.display = 'flex';
             screenAuth.style.display = 'none';
             screenSetup.style.display = 'none';
             screenApp.style.display = 'none';
-            if (currentUserObj) {
-                await signOut(auth); // Expulsion
-            }
-            return; // On arrête tout ici
+            if (currentUserObj) await signOut(auth); // Expulsion
+            return; 
         }
 
-        // Sinon, on cache la maintenance
         screenMaintenance.style.display = 'none';
 
-        // 2. FLUX NORMAL
         if (currentUserObj) {
             if(currentUserObj.uid === ADMIN_UID) document.getElementById('nav-admin').style.display = 'flex';
             
-            if (!isDataLoaded) { // On ne charge la Data qu'une fois pour éviter les boucles
+            if (!isDataLoaded) { 
                 const userDoc = await getDoc(doc(db, "users", currentUserObj.uid));
                 if (userDoc.exists() && userDoc.data().budgetId) { 
                     CURRENT_BUDGET_ID = userDoc.data().budgetId; 
@@ -106,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            // Utilisateur non connecté et pas en maintenance
             screenAuth.style.display = 'flex'; 
             screenApp.style.display = 'none'; 
             screenSetup.style.display = 'none'; 
@@ -180,11 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (currentCellTime >= evStart && currentCellTime <= evEnd) { 
                     let badgeClass = 'badge-perso';
                     if(ev.type.toLowerCase().includes('pro') || ev.type.toLowerCase().includes('travail')) badgeClass = 'badge-pro';
-                    
                     let timePrefix = "";
-                    if(ev.timeStart && currentCellTime === evStart) {
-                        timePrefix = `🕒 ${ev.timeStart} - `;
-                    }
+                    if(ev.timeStart && currentCellTime === evStart) { timePrefix = `🕒 ${ev.timeStart} - `; }
+                    
                     cellHTML += `<div class="badge ${badgeClass} ${ev.important ? 'badge-important' : ''} delete-ev" data-id="${ev.id}" title="${ev.type} - ${ev.title}">${ev.important ? '⚠️ ' : ''}${timePrefix}${ev.title}</div>`; 
                 } 
             });
@@ -327,14 +321,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
-    // --- GESTION DES CLICS MULTIPLES ---
+    // --- GESTION DES CLICS MULTIPLES (Réduction, suppression, admin) ---
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
         if(e.target.classList.contains('delete-exp')) { if(confirm("Supprimer l'opération ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-cat')) { if(confirm("Supprimer la catégorie ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, e.target.dataset.id)); }
         if(e.target.classList.contains('delete-ev')) { if(confirm("Supprimer cet événement du calendrier ?")) await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/events`, e.target.dataset.id)); }
-        if(e.target.classList.contains('delete-user-data')) { if(confirm("Purger les données de cet utilisateur et l'éjecter de son foyer ?")) { await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null }); alert("Utilisateur purgé."); loadAdminData(); } }
-        if(e.target.classList.contains('delete-budget-data')) { if(confirm("Détruire ce foyer cassera l'application pour ses membres. Continuer ?")) { await deleteDoc(doc(db, "budgets", e.target.dataset.bid)); alert("Foyer détruit."); loadAdminData(); } }
+        
+        if(e.target.classList.contains('delete-user-data')) { 
+            if(confirm("ATTENTION: Cela va purger les données de cet utilisateur et l'éjecter de son foyer. Continuer ?")) {
+                await updateDoc(doc(db, "users", e.target.dataset.uid), { budgetId: null });
+                alert("Utilisateur purgé."); loadAdminData();
+            }
+        }
+        if(e.target.classList.contains('delete-budget-data')) { 
+            if(confirm("DANGER EXTRÊME: Détruire ce foyer cassera l'application pour ses membres. Continuer ?")) {
+                await deleteDoc(doc(db, "budgets", e.target.dataset.bid));
+                alert("Foyer détruit."); loadAdminData();
+            }
+        }
     });
 
     document.getElementById('search-bar')?.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); updateUI(); });
