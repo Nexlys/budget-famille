@@ -109,9 +109,15 @@
         .progress-fill { height: 100%; transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1); border-radius: 20px; }
         .green { background: var(--success); } .orange { background: #F2CC8F; } .red { background: var(--danger); }
 
+        /* --- TABLEAUX & TRI --- */
         .table-container { padding: 0; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 20px; background: var(--card-bg); box-shadow: 0 8px 24px rgba(0,0,0,0.03); border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
+        
         th { padding: 18px 15px; text-align: left; border-bottom: 2px solid var(--bg); font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; color: var(--text); opacity: 0.6; font-weight: 800; }
+        /* Nouveau CSS pour les en-têtes triables */
+        .sortable { cursor: pointer; user-select: none; transition: 0.2s; }
+        .sortable:hover { background: rgba(0,0,0,0.02); opacity: 1; color: var(--primary); }
+        
         td { padding: 15px; text-align: left; border-bottom: 1px solid var(--bg); font-size: 0.95em; font-weight: 600; color: var(--text); vertical-align: middle;}
         tr:last-child td { border-bottom: none; }
         tr:hover td { background-color: rgba(0,0,0,0.01); }
@@ -130,7 +136,6 @@
         .badge-perso { background: var(--primary); } .badge-pro { background: #3D405B; }
         .badge-important { border-left: 4px solid #F2CC8F; }
 
-        /* --- LE BOUTON D'ACTION PRINCIPAL (FAB) --- */
         .fab-btn { position: fixed; bottom: 35px; right: 35px; width: 65px; height: 65px; border-radius: 22px; background: var(--primary); color: white; font-size: 2.2em; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(212, 163, 115, 0.4); cursor: pointer; z-index: 900; border: none; transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .fab-btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 15px 35px rgba(212, 163, 115, 0.5); }
         
@@ -159,6 +164,7 @@
             .calendar-day { min-height: 70px; font-size: 0.75em; }
             .fab-btn { bottom: 95px; right: 20px; width: 60px; height: 60px; border-radius: 20px; } 
             .bottom-nav { display: flex; } 
+            
             .balance { font-size: 1.8em; }
             h2 { font-size: 1.4em; }
         }
@@ -222,6 +228,18 @@
     </div>
 </div>
 
+<div id="modal-feedback" class="fullscreen-overlay" style="display:none; z-index: 3000;">
+    <div class="auth-box" style="position:relative;">
+        <button id="btn-close-feedback" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6;">✕</button>
+        <h2 style="color: var(--primary); margin-top:0; font-weight:800;">💡 Une idée ? Un bug ?</h2>
+        <p style="font-size:0.95em; color:var(--text); opacity:0.7; margin-bottom:20px; font-weight:600;">Envoyez votre message directement à l'administrateur !</p>
+        <form id="feedback-form">
+            <textarea id="feedback-text" rows="4" placeholder="Décrivez votre idée ou le problème rencontré..." required></textarea>
+            <button type="submit" style="margin-top:20px;">Envoyer le message</button>
+        </form>
+    </div>
+</div>
+
 <div id="screen-maintenance" class="fullscreen-overlay" style="display:none; z-index: 4000;">
     <div class="auth-box" style="border: 2px dashed var(--danger);">
         <h1 style="font-size: 4em; margin: 0 0 15px 0;">🛠️</h1>
@@ -278,6 +296,9 @@
         <li id="nav-profile" class="nav-item" style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px;"><span>⚙️</span> Paramètres</li>
         <li id="nav-admin" class="nav-item" style="display:none; background:var(--danger); color:white; margin-top:20px; justify-content:center;">👑 Administration</li>
     </ul>
+    <div class="sidebar-footer">
+        <button id="logout-btn" style="background:transparent; color:var(--danger); border:2px solid var(--danger); margin-top:0; box-shadow:none;">🔓 Déconnexion</button>
+    </div>
 </nav>
 
 <main class="main-content" id="screen-app" style="display:none;">
@@ -303,7 +324,10 @@
                 <div class="card-header"><h3>💰 Reste à vivre</h3></div>
                 <div class="card-content">
                     <span id="solde-actuel" class="balance">0.00 €</span>
-                    <div style="font-size:0.95em; margin-top:10px; color:var(--text); font-weight:700; background:var(--bg); padding:10px 15px; border-radius:12px; display:inline-block;">Revenus : <span id="total-revenus" style="color:var(--success);">0€</span></div>
+                    <div style="font-size:0.95em; margin-top:10px; color:var(--text); font-weight:700; background:var(--bg); padding:10px 15px; border-radius:12px; display:inline-block;">Revenus : <span id="total-revenus" style="color:var(--success);">0.00 €</span></div>
+                    <div id="btn-edit-carryover" style="margin-top:15px; font-size:0.85em; font-weight:700; color:var(--text); opacity:0.7; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s;">
+                        <span>+ Solde du mois précédent : </span> <span id="carryover-amount" style="color:var(--primary); font-weight:800;">0.00 €</span> ✏️
+                    </div>
                 </div>
             </div>
             <div class="card" style="border-left: 5px solid var(--danger);">
@@ -315,7 +339,11 @@
             <div class="card" style="text-align:center;">
                 <div class="card-header"><h3 style="text-align:left;">📈 Répartition</h3></div>
                 <div class="card-content">
-                    <div style="height:120px; width:120px; margin:auto; position:relative;"><canvas id="expenseChart"></canvas></div>
+                    <div id="expenseChartContainer" style="height:120px; width:120px; margin:auto; position:relative;"><canvas id="expenseChart"></canvas></div>
+                    <div style="margin-top:20px; font-size:0.9em; color:var(--text); font-weight:700; background:var(--bg); padding:10px; border-radius:12px; cursor:pointer;">
+                        <label style="cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;"><input type="checkbox" id="toggle-proportional"> Afficher l'effort de chacun</label>
+                    </div>
+                    <div id="proportional-container" style="display:none; text-align:left; margin-top:15px;"></div>
                 </div>
             </div>
         </div>
@@ -328,9 +356,23 @@
                     <button id="export-btn" class="btn-small" style="margin:0 !important; font-weight:800;">📥 CSV</button>
                 </div>
             </div>
+            
+            <div id="search-summary" style="display:none; margin-bottom:15px; padding:12px 20px; background:rgba(212, 163, 115, 0.1); border:1px solid var(--primary); border-radius:16px; font-weight:800; color:var(--primary);">
+                Résultat(s) du filtre : <span id="search-summary-amount">0.00 €</span>
+            </div>
+
             <div class="table-container">
                 <table>
-                    <thead style="background:var(--bg);"><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Par</th><th>Montant</th><th>Actions</th></tr></thead>
+                    <thead style="background:var(--bg);">
+                        <tr>
+                            <th class="sortable" data-sort="date" title="Trier par date">Date <span id="sort-icon-date"></span></th>
+                            <th class="sortable" data-sort="desc" title="Trier par description">Description <span id="sort-icon-desc"></span></th>
+                            <th class="sortable" data-sort="category" title="Trier par catégorie">Catégorie <span id="sort-icon-category"></span></th>
+                            <th class="sortable" data-sort="payer" title="Trier par payeur">Par <span id="sort-icon-payer"></span></th>
+                            <th class="sortable" data-sort="amount" title="Trier par montant">Montant <span id="sort-icon-amount"></span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
                     <tbody id="expense-list"></tbody>
                 </table>
             </div>
@@ -354,8 +396,15 @@
             </div>
             
             <div class="card" style="background:rgba(212, 163, 115, 0.05); border:1px dashed var(--primary);">
-                <h4 style="margin-top:0; font-size:1.2em; color:var(--text);">Gérer les Catégories</h4>
-                <form id="category-form"><div style="display:flex; gap:10px;"><input type="text" id="new-cat-emoji" placeholder="🏠" style="width:65px; text-align:center; font-size:1.2em;"><input type="text" id="new-cat-name" placeholder="Nom (Ex: Courses)" required></div><input type="number" id="new-cat-limit" placeholder="Limite Mensuelle € (Optionnel)"><button type="submit" class="btn-small" style="background:var(--primary); color:white; width:100% !important; margin-top:15px !important;">+ Ajouter</button></form>
+                <h4 id="category-form-title" style="margin-top:0; font-size:1.2em; color:var(--text);">Gérer les Catégories</h4>
+                <form id="category-form">
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="new-cat-emoji" placeholder="🏠" style="width:65px; text-align:center; font-size:1.2em;" required>
+                        <input type="text" id="new-cat-name" placeholder="Nom (Ex: Courses)" required>
+                    </div>
+                    <input type="number" id="new-cat-limit" placeholder="Limite Mensuelle € (Optionnel)">
+                    <button type="submit" id="btn-submit-category" class="btn-small" style="background:var(--primary); color:white; width:100% !important; margin-top:15px !important;">+ Ajouter</button>
+                </form>
                 <ul id="category-manage-list" style="list-style:none; padding:0; margin-top:20px;"></ul>
             </div>
         </div>
@@ -439,7 +488,7 @@
     </div>
 
     <div id="view-profile" class="view-section" style="display:none; max-width: 650px; margin: auto;">
-        <h2 style="color:var(--primary); margin-top:0; margin-bottom: 25px; font-weight:800; font-size:1.8em; text-align:center;">⚙️ Centre de Contrôle</h2>
+        <h2 style="color:var(--primary); margin-top:0; margin-bottom: 25px; font-weight:800; font-size:1.8em; text-align:center;">⚙️ Paramètres</h2>
         
         <div class="card" style="margin-bottom: 25px;">
             <h3 style="margin-top:0;">🎨 Apparence de l'application</h3>
@@ -461,9 +510,9 @@
             <div style="display:flex; gap:12px; align-items: center; justify-content:center;">
                 <label style="font-weight:800;">Votre Prénom :</label>
                 <input type="text" id="admin-pseudo" placeholder="Ex: Thomas" style="width:150px; margin-top:0;">
-                <button id="btn-update-pseudo" class="btn-small" style="background:var(--text); color:white; margin-top:0 !important;">Enregistrer</button>
+                <button id="btn-update-pseudo" class="btn-small" style="background:var(--text); color:white; margin-top:0 !important; padding:14px 25px !important;">Enregistrer</button>
             </div>
-            <p id="profile-success" style="color:var(--success); font-size:0.95em; display:none; margin:15px 0 0 0; font-weight: 800;">✓ Mis à jour !</p>
+            <p id="profile-success" style="color:var(--success); font-size:0.95em; display:none; margin:15px 0 0 0; font-weight: 800;">✓ Profil mis à jour !</p>
         </div>
 
         <div class="card" style="margin-bottom: 25px;">

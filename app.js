@@ -22,6 +22,7 @@ const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2";
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- 🛠️ SYSTÈME DE POP-UP PERSONNALISÉ ---
     function customAlert(message, title = "Information") {
         return new Promise((resolve) => {
             const overlay = document.getElementById('custom-dialog-overlay');
@@ -40,13 +41,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('custom-dialog-title').innerText = title;
             document.getElementById('custom-dialog-msg').innerHTML = message;
             const btnContainer = document.getElementById('custom-dialog-btns');
-            btnContainer.innerHTML = `<button id="btn-dialog-cancel" class="btn-small" style="background:var(--bg); color:var(--text); flex:1;">Annuler</button><button id="btn-dialog-confirm" style="background:var(--danger); flex:1;">Confirmer</button>`;
+            btnContainer.innerHTML = `
+                <button id="btn-dialog-cancel" class="btn-small" style="background:var(--bg); color:var(--text); flex:1;">Annuler</button>
+                <button id="btn-dialog-confirm" style="background:var(--danger); color:white; flex:1; border:none; border-radius:14px; font-weight:bold;">Confirmer</button>
+            `;
             overlay.style.display = 'flex';
             document.getElementById('btn-dialog-cancel').onclick = () => { overlay.style.display = 'none'; resolve(false); };
             document.getElementById('btn-dialog-confirm').onclick = () => { overlay.style.display = 'none'; resolve(true); };
         });
     }
 
+    // --- VARIABLES GLOBALES ---
     const todayISO = new Date().toISOString().split('T')[0];
     if(document.getElementById('expense-date')) document.getElementById('expense-date').value = todayISO;
 
@@ -61,24 +66,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const screenApp = document.getElementById('screen-app');
 
     const viewDashboard = document.getElementById('view-dashboard');
-    const viewBudget = document.getElementById('view-budget'); // NOUVEAU
+    const viewBudget = document.getElementById('view-budget');
     const viewProfile = document.getElementById('view-profile');
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
     const viewSubs = document.getElementById('view-subscriptions');
     
-    const navItems = document.querySelectorAll('.nav-item');
-
     let CURRENT_BUDGET_ID = null;
     let unsubscribers = [];
     let isDataLoaded = false;
-    let goals = [], expenses = [], customCategories = [], members = [], eventsData = [], subsData = [];
+    let goals = [], expenses = [], customCategories = [], members = [], eventsData = [], subsData = [], monthlySettings = [];
     let myChart = null, myAnnualChart = null, currentSearch = "";
     let calMonth = new Date().getMonth(); let calYear = new Date().getFullYear();
     let reminderPopupShown = false;
     let isMaintenance = false; let currentUserObj = null;
     let editingExpenseId = null; 
+    let editingCategoryId = null; // NOUVEAU
     let deferredPrompt; 
+    
+    // Variables pour le tri du tableau
+    let sortCol = 'date';
+    let sortAsc = false;
 
     // --- 🌍 GESTION RÉSEAU & INSTALLATION PWA ---
     window.addEventListener('online', () => document.getElementById('status-indicator').innerText = "● Connecté");
@@ -151,25 +159,42 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-add-expense').style.display='none'; renderCalendar(); });
     document.getElementById('bnav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-add-expense').style.display='none'; renderSubs(); });
 
-    // BOUTON FEEDBACK (Maintenant dans la sidebar ou le profil)
     document.getElementById('btn-open-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); } });
     document.getElementById('btn-open-feedback-page')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; });
     document.getElementById('btn-close-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'none'; });
     document.getElementById('feedback-form')?.addEventListener('submit', async(e) => { e.preventDefault(); await addDoc(collection(db, "feedbacks"), { text: document.getElementById('feedback-text').value, user: auth.currentUser.email, date: Date.now() }); document.getElementById('feedback-form').reset(); document.getElementById('modal-feedback').style.display = 'none'; customAlert("Merci pour votre retour !", "Message envoyé"); });
 
-    // BOUTON + FLOTTANT (FAB) OUVRE LA MODALE DE DEPENSE
     document.getElementById('fab-add-expense')?.addEventListener('click', () => { 
         document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
         document.getElementById('modal-expense').style.display = 'flex'; 
     });
     document.getElementById('btn-close-expense-modal')?.addEventListener('click', () => { 
         document.getElementById('modal-expense').style.display = 'none'; 
-        editingExpenseId = null; // Reset if closed during edit
+        editingExpenseId = null; 
         document.getElementById('expense-form').reset();
         document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
         document.getElementById('btn-submit-expense').innerText = "Ajouter";
     });
     
+    // BOUTON SOLDE REPORTÉ (Carry Over)
+    document.getElementById('btn-edit-carryover')?.addEventListener('click', async () => {
+        const m = parseInt(document.getElementById('filter-month').value);
+        const y = parseInt(document.getElementById('filter-year').value);
+        const monthKey = `${y}-${String(m+1).padStart(2, '0')}`;
+        const currentVal = monthlySettings.find(s => s.id === monthKey)?.carryOver || 0;
+        
+        const val = prompt("Saisissez le solde restant d'avant votre paie (Report du mois précédent) :\n(Mettez 0 pour annuler)", currentVal);
+        if(val !== null && val.trim() !== "") {
+            const num = parseFloat(val.replace(',', '.'));
+            if(!isNaN(num)) {
+                await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/monthly_settings`, monthKey), { carryOver: num }, { merge: true });
+                customAlert("Solde reporté mis à jour !");
+            } else {
+                customAlert("Veuillez entrer un nombre valide.", "Erreur");
+            }
+        }
+    });
+
     function fireConfetti() {
         const colors = ['#D4A373', '#CCD5AE', '#E07A5F', '#81B29A', '#F2CC8F'];
         for(let i=0; i<60; i++) {
@@ -227,22 +252,88 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.reset(); customAlert("Événement ajouté au calendrier !", "Succès"); 
     });
 
+    // --- GESTION DU TRI DU TABLEAU ---
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.sort;
+            if(sortCol === col) sortAsc = !sortAsc;
+            else { sortCol = col; sortAsc = true; }
+            updateUI();
+        });
+    });
+
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
-        list.innerHTML = ""; const m = parseInt(document.getElementById('filter-month').value); const y = parseInt(document.getElementById('filter-year').value);
-        let rev = 0, dep = 0, catSums = {}; let memberStats = {}; members.forEach(mbr => memberStats[mbr.id] = { name: mbr.name, rev: 0, dep: 0 });
+        list.innerHTML = ""; 
+        const m = parseInt(document.getElementById('filter-month').value); 
+        const y = parseInt(document.getElementById('filter-year').value);
+        
+        let globalRev = 0, globalDep = 0, catSums = {}; 
+        let memberStats = {}; members.forEach(mbr => memberStats[mbr.id] = { name: mbr.name, rev: 0, dep: 0 });
 
-        const filteredExpenses = expenses.filter(e => { return new Date(e.timestamp).getMonth() === m && new Date(e.timestamp).getFullYear() === y && (e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch)); });
+        // Calcul GLobaux (Indépendant de la recherche)
+        const monthlyExpenses = expenses.filter(e => new Date(e.timestamp).getMonth() === m && new Date(e.timestamp).getFullYear() === y);
+        
+        monthlyExpenses.forEach(e => {
+            const isInc = e.type === 'income'; 
+            let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
+            if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
+            
+            if(isInc) { 
+                globalRev += e.amount; 
+                memberStats[currentPayerId].rev += e.amount; 
+            } else { 
+                globalDep += e.amount; 
+                memberStats[currentPayerId].dep += e.amount; 
+                catSums[e.category] = (catSums[e.category] || 0) + e.amount; 
+            }
+        });
+
+        // Gestion du Solde Reporté
+        const monthKey = `${y}-${String(m+1).padStart(2, '0')}`;
+        const carryOver = monthlySettings.find(s => s.id === monthKey)?.carryOver || 0;
+        globalRev += carryOver; // Ajout au total des revenus disponibles
+        document.getElementById('carryover-amount').innerText = carryOver.toFixed(2) + ' €';
+
+        // Filtrage pour la recherche du tableau
+        let filteredExpenses = monthlyExpenses;
+        let searchSum = 0;
+        
+        if (currentSearch !== "") {
+            filteredExpenses = monthlyExpenses.filter(e => e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch));
+            filteredExpenses.forEach(e => { if(e.type === 'income') searchSum += e.amount; else searchSum -= e.amount; });
+            document.getElementById('search-summary').style.display = 'block';
+            document.getElementById('search-summary-amount').innerText = (searchSum > 0 ? '+' : '') + searchSum.toFixed(2) + ' €';
+        } else {
+            document.getElementById('search-summary').style.display = 'none';
+        }
+
+        // Tri des données filtrées
+        filteredExpenses.sort((a, b) => {
+            let valA, valB;
+            if(sortCol === 'date') { valA = a.timestamp; valB = b.timestamp; }
+            else if(sortCol === 'amount') { valA = (a.type==='income'?a.amount:-a.amount); valB = (b.type==='income'?b.amount:-b.amount); }
+            else if(sortCol === 'payer') { valA = members.find(mbr => mbr.id === a.payerId)?.name || a.payer || ""; valB = members.find(mbr => mbr.id === b.payerId)?.name || b.payer || ""; }
+            else { valA = a[sortCol]?.toLowerCase(); valB = b[sortCol]?.toLowerCase(); }
+
+            if(valA < valB) return sortAsc ? -1 : 1;
+            if(valA > valB) return sortAsc ? 1 : -1;
+            return 0;
+        });
+
+        // Mise à jour des icônes de tri
+        document.querySelectorAll('th.sortable span').forEach(el => el.innerText = '');
+        const currentIcon = document.getElementById(`sort-icon-${sortCol}`);
+        if(currentIcon) currentIcon.innerText = sortAsc ? ' ⬆️' : ' ⬇️';
 
         if(filteredExpenses.length === 0) {
-            list.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text); opacity:0.5; font-size:1.1em; font-weight:700;">📭 Aucune opération pour cette période.<br>C'est le calme plat !</td></tr>`;
+            list.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text); opacity:0.5; font-size:1.1em; font-weight:700;">📭 Aucune opération trouvée pour cette recherche.<br>C'est le calme plat !</td></tr>`;
         } else {
             filteredExpenses.forEach(e => {
-                const isInc = e.type === 'income'; let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
-                if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
-                if(isInc) { rev += e.amount; memberStats[currentPayerId].rev += e.amount; } else { dep += e.amount; memberStats[currentPayerId].dep += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
+                const isInc = e.type === 'income'; 
+                let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
                 const tr = document.createElement('tr'); 
-                tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small style="background:var(--bg); padding:6px 10px; border-radius:12px; font-weight:700;">${e.category}</small></td><td><strong>${memberStats[currentPayerId].name}</strong></td><td style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
+                tr.innerHTML = `<td>${e.date}</td><td>${e.desc}</td><td><small style="background:var(--bg); padding:6px 10px; border-radius:12px; font-weight:700;">${e.category}</small></td><td><strong>${memberStats[currentPayerId]?.name || e.payer}</strong></td><td style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
                 <td style="white-space:nowrap;">
                     <button class="duplicate-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Dupliquer">📋</button>
                     <button class="edit-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Modifier">✏️</button>
@@ -252,20 +343,34 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        document.getElementById('total-revenus').innerText = rev.toFixed(2) + ' €'; document.getElementById('total-depenses').innerText = dep.toFixed(2) + ' €';
-        document.getElementById('solde-actuel').innerText = (rev - dep).toFixed(2) + ' €'; document.getElementById('solde-actuel').style.color = (rev - dep) >= 0 ? 'var(--success)' : 'var(--danger)';
+        // Mise à jour des cartes Dashboard avec les données GLOBALES
+        document.getElementById('total-revenus').innerText = globalRev.toFixed(2) + ' €'; 
+        document.getElementById('total-depenses').innerText = globalDep.toFixed(2) + ' €';
+        document.getElementById('solde-actuel').innerText = (globalRev - globalDep).toFixed(2) + ' €'; 
+        document.getElementById('solde-actuel').style.color = (globalRev - globalDep) >= 0 ? 'var(--success)' : 'var(--danger)';
 
+        // Taux d'effort intelligent
         const propContainer = document.getElementById('proportional-container');
         if(propContainer) {
-            propContainer.innerHTML = ''; Object.values(memberStats).forEach(stat => {
-                if(stat.rev === 0 && stat.dep === 0) return; const pct = stat.rev > 0 ? Math.min((stat.dep / stat.rev) * 100, 100) : 0;
-                propContainer.innerHTML += `<p style="font-size:0.9em; margin: 10px 0 5px 0; display:flex; justify-content:space-between; color:var(--text); font-weight:700;"><strong>${stat.name}</strong> <span>${pct.toFixed(1)}%</span></p><div class="progress-bar" style="height:12px; margin-top:0;"><div class="progress-fill ${pct > 80 ? 'red' : (pct > 50 ? 'orange' : 'green')}" style="width:${pct}%"></div></div>`;
+            propContainer.innerHTML = ''; 
+            Object.values(memberStats).forEach(stat => {
+                if(stat.rev === 0 && stat.dep === 0) return; 
+                // Pourcentage des dépenses de l'utilisateur par rapport à ses propres revenus !
+                const pct = stat.rev > 0 ? Math.min((stat.dep / stat.rev) * 100, 100) : (stat.dep > 0 ? 100 : 0);
+                propContainer.innerHTML += `
+                <div style="margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; color:var(--text); font-weight:700; font-size:0.9em; margin-bottom:5px;">
+                        <strong>${stat.name}</strong> 
+                        <span>${pct.toFixed(1)}%</span>
+                    </div>
+                    <div style="font-size:0.75em; color:var(--text); opacity:0.6; text-align:right; margin-top:-5px; margin-bottom:2px;">Dépensé: ${stat.dep.toFixed(0)}€ / Gagné: ${stat.rev.toFixed(0)}€</div>
+                    <div class="progress-bar" style="height:12px; margin-top:0;"><div class="progress-fill ${pct > 80 ? 'red' : (pct > 50 ? 'orange' : 'green')}" style="width:${pct}%"></div></div>
+                </div>`;
             });
         }
         const ctx = document.getElementById('expenseChart')?.getContext('2d');
         if (ctx) { if (myChart) myChart.destroy(); myChart = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(catSums), datasets: [{ data: Object.values(catSums), backgroundColor: ['#D4A373', '#CCD5AE', '#E07A5F', '#81B29A', '#F2CC8F'], borderWidth: 0 }] }, options: { plugins: { legend: { display: false } }, cutout: '75%' } }); }
         
-        // Mise à jour des éléments visuels du menu BUDGET
         renderEnvelopes(catSums); 
         renderAnnualChart(); 
         renderCalendar(); 
@@ -273,9 +378,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderMembers() { const sel = document.getElementById('payer'); if(sel) { sel.innerHTML = ''; members.forEach(m => sel.appendChild(new Option(m.name, m.id))); if(auth.currentUser) sel.value = auth.currentUser.uid; } }
-    function renderCategories() { const sel = document.getElementById('category'); const sSel = document.getElementById('sub-category'); const list = document.getElementById('category-manage-list'); if(sel) { sel.innerHTML = '<option value="">-- Choisir une catégorie --</option>'; sSel.innerHTML = sel.innerHTML; customCategories.forEach(c => { const opt = new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`); sel.appendChild(opt); sSel.appendChild(opt.cloneNode(true)); }); } if(list) { list.innerHTML = ""; customCategories.forEach(c => { const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border-radius:12px; margin-bottom:8px;"; li.innerHTML = `<span style="font-weight:700;">${c.emoji} ${c.name}</span> <button class="delete-cat" data-id="${c.id}" style="width:auto; padding:6px 12px; margin:0; background:var(--danger); border-radius:10px; color:white;">✕</button>`; list.appendChild(li); }); } }
+    
+    function renderCategories() { 
+        const sel = document.getElementById('category'); const sSel = document.getElementById('sub-category'); const list = document.getElementById('category-manage-list'); 
+        if(sel) { sel.innerHTML = '<option value="">-- Choisir une catégorie --</option>'; sSel.innerHTML = sel.innerHTML; customCategories.forEach(c => { const opt = new Option(`${c.emoji} ${c.name}`, `${c.emoji} ${c.name}`); sel.appendChild(opt); sSel.appendChild(opt.cloneNode(true)); }); } 
+        if(list) { 
+            list.innerHTML = ""; customCategories.forEach(c => { 
+                const li = document.createElement('li'); li.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--card-bg); border-radius:12px; margin-bottom:8px; border:1px solid var(--border);"; 
+                li.innerHTML = `<span style="font-weight:700;">${c.emoji} ${c.name} ${c.limit ? `<small style="color:var(--danger); opacity:0.8;">(Max ${c.limit}€)</small>` : ''}</span> 
+                <div style="display:flex; gap:8px;">
+                    <button class="edit-cat btn-small" data-id="${c.id}" style="padding:6px 12px !important; background:var(--secondary); color:var(--text); border:none;">✏️</button>
+                    <button class="delete-cat btn-small" data-id="${c.id}" style="padding:6px 12px !important; background:var(--danger); color:white; border:none;">✕</button>
+                </div>`; 
+                list.appendChild(li); 
+            }); 
+        } 
+    }
+    
     function renderGoals() { const cont = document.getElementById('goals-container'); const sel = document.getElementById('goal-selector'); if(!cont || !sel) return; cont.innerHTML = ""; sel.innerHTML = '<option value="">-- Lier à un objectif --</option>'; goals.forEach(g => { const p = Math.min((g.current / g.target) * 100, 100); const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<h3>🎯 ${g.name}</h3><p style="font-weight:700; font-size:1.1em; opacity:0.8;">${g.current.toFixed(0)}€ <small>/ ${g.target}€</small></p><div class="progress-bar"><div class="progress-fill green" style="width:${p}%"></div></div>`; cont.appendChild(card); sel.appendChild(new Option(g.name, g.id)); }); }
-    function renderEnvelopes(catSums) { const envContent = document.getElementById('envelopes-section-content'); if(!envContent) return; envContent.innerHTML = ''; const envelopeCats = customCategories.filter(c => c.limit && c.limit > 0); if (envelopeCats.length === 0) { envContent.innerHTML = '<p style="text-align:center; padding:20px; color:var(--text); opacity:0.6; font-weight:700;">✉️ Aucune enveloppe configurée.</p>'; return; } const gridDiv = document.createElement('div'); gridDiv.style.display = 'grid'; gridDiv.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))'; gridDiv.style.gap = '20px'; envelopeCats.forEach(cat => { const spent = catSums[`${cat.emoji} ${cat.name}`] || 0; const p = Math.min((spent / cat.limit) * 100, 100); const envDiv = document.createElement('div'); envDiv.style.background = 'var(--bg)'; envDiv.style.padding = '20px'; envDiv.style.borderRadius = '20px'; envDiv.innerHTML = `<h4 style="margin:0 0 10px 0; font-size:1.1em; color:var(--text);">${cat.emoji} ${cat.name}</h4><div style="display:flex; justify-content:space-between; font-size:1em; margin-bottom:8px;"><span style="font-weight:800;">${spent.toFixed(2)}€</span><span style="color:var(--text); opacity:0.6; font-weight:700;">/ ${cat.limit}€</span></div><div class="progress-bar" style="margin-top:0;"><div class="progress-fill ${p > 90 ? 'red' : (p > 70 ? 'orange' : 'green')}" style="width:${p}%"></div></div>`; gridDiv.appendChild(envDiv); }); envContent.appendChild(gridDiv); }
+    
+    function renderEnvelopes(catSums) { const envContent = document.getElementById('envelopes-section-content'); if(!envContent) return; envContent.innerHTML = ''; const envelopeCats = customCategories.filter(c => c.limit && c.limit > 0); if (envelopeCats.length === 0) { envContent.innerHTML = '<p style="text-align:center; padding:20px; color:var(--text); opacity:0.6; font-weight:700;">✉️ Aucune enveloppe configurée avec une limite mensuelle.</p>'; return; } const gridDiv = document.createElement('div'); gridDiv.style.display = 'grid'; gridDiv.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))'; gridDiv.style.gap = '20px'; envelopeCats.forEach(cat => { const spent = catSums[`${cat.emoji} ${cat.name}`] || 0; const p = Math.min((spent / cat.limit) * 100, 100); const envDiv = document.createElement('div'); envDiv.style.background = 'var(--bg)'; envDiv.style.padding = '20px'; envDiv.style.borderRadius = '20px'; envDiv.innerHTML = `<h4 style="margin:0 0 10px 0; font-size:1.1em; color:var(--text);">${cat.emoji} ${cat.name}</h4><div style="display:flex; justify-content:space-between; font-size:1em; margin-bottom:8px;"><span style="font-weight:800;">${spent.toFixed(2)}€</span><span style="color:var(--text); opacity:0.6; font-weight:700;">/ ${cat.limit}€</span></div><div class="progress-bar" style="margin-top:0;"><div class="progress-fill ${p > 90 ? 'red' : (p > 70 ? 'orange' : 'green')}" style="width:${p}%"></div></div>`; gridDiv.appendChild(envDiv); }); envContent.appendChild(gridDiv); }
+    
     function renderAnnualChart() { const ctx = document.getElementById('annualChart')?.getContext('2d'); if(!ctx) return; const monthlyData = new Array(12).fill(0).map(() => ({ inc: 0, exp: 0 })); expenses.filter(e => new Date(e.timestamp).getFullYear() === parseInt(document.getElementById('filter-year').value)).forEach(e => { const m = new Date(e.timestamp).getMonth(); if(e.type === 'income') monthlyData[m].inc += e.amount; else monthlyData[m].exp += e.amount; }); if(myAnnualChart) myAnnualChart.destroy(); 
     const isDark = document.body.classList.contains('theme-dark'); const chartColors = isDark ? {inc: '#81B29A', exp: '#E07A5F', text: '#EAE4D9'} : {inc: '#81B29A', exp: '#E07A5F', text: '#5C5346'};
     myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: chartColors.inc, borderRadius: 6 }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: chartColors.exp, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: chartColors.text } }, y: { ticks: { color: chartColors.text } } }, plugins: { legend: { labels: { color: chartColors.text, font: {family: 'Nunito', weight: 'bold'} } } } } }); }
@@ -304,6 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), s => { goals = []; s.forEach(doc => goals.push({ id: doc.id, ...doc.data() })); renderGoals(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); checkReminders(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), s => { subsData = []; s.forEach(doc => subsData.push({ id: doc.id, ...doc.data() })); renderSubs(); }));
+        // NOUVEAU: Récupération des paramètres mensuels (Pour le Solde Reporté)
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/monthly_settings`), s => { monthlySettings = []; s.forEach(doc => monthlySettings.push({ id: doc.id, ...doc.data() })); updateUI(); }));
     }
 
     // --- LOGIQUE ADMINISTRATION ---
@@ -328,48 +453,31 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable ! Vérifiez avec votre partenaire.", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- FORMULAIRE UNIQUE DE DÉPENSE ---
-    async function saveExpense(type, amount, cat, desc, dateVal) {
-        if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
-            const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
-            if(targetGoal) {
-                await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
-                if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
-            }
-        } 
-        
-        const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
-        const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
-
-        if(editingExpenseId) {
-            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), { desc: desc, amount: amount, category: cat, type: type, payerId: document.getElementById('payer').value, date: frDate, timestamp: ts });
-            editingExpenseId = null; 
-        } else {
-            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type }); 
-        }
-    }
-
-    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { 
+    // --- ÉDITION DES CATÉGORIES (NOUVEAU) ---
+    document.getElementById('category-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); 
-        await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value, document.getElementById('expense-date').value); 
+        const em = document.getElementById('new-cat-emoji').value;
+        const nom = document.getElementById('new-cat-name').value;
+        const lim = parseFloat(document.getElementById('new-cat-limit').value) || null;
+
+        if(editingCategoryId) {
+            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, editingCategoryId), { emoji: em, name: nom, limit: lim });
+            editingCategoryId = null;
+            document.getElementById('btn-submit-category').innerText = "+ Ajouter";
+            document.getElementById('category-form-title').innerText = "Gérer les Catégories";
+        } else {
+            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: em, name: nom, limit: lim }); 
+        }
         e.target.reset(); 
-        document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
-        document.getElementById('payer').value = auth.currentUser.uid; 
-        document.getElementById('modal-expense').style.display = 'none'; // Ferme la pop-up
-        
-        // Reset du titre du modal
-        document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
-        document.getElementById('btn-submit-expense').innerText = "Ajouter l'opération";
     });
 
-    document.getElementById('category-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: document.getElementById('new-cat-emoji').value, name: document.getElementById('new-cat-name').value, limit: parseFloat(document.getElementById('new-cat-limit').value) || null }); e.target.reset(); });
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value) }); e.target.reset(); });
 
     // --- GESTION DES CLICS MULTIPLES (ÉDITION & DUPLICATION CENTRALISÉES) ---
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
         
-        // ✏️ ÉDITER (Ouvre la Pop-up Principale)
+        // ✏️ ÉDITER DÉPENSE
         if(e.target.classList.contains('edit-exp')) {
             const expId = e.target.dataset.id; const expToEdit = expenses.find(x => x.id === expId);
             if(expToEdit) {
@@ -387,20 +495,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // 📋 DUPLIQUER (Ouvre la Pop-up Principale en mode création)
+        // 📋 DUPLIQUER DÉPENSE
         if(e.target.classList.contains('duplicate-exp')) {
             const expId = e.target.dataset.id; const expToDup = expenses.find(x => x.id === expId);
             if(expToDup) {
-                editingExpenseId = null; // C'est une création !
+                editingExpenseId = null; 
                 document.getElementById('desc').value = expToDup.desc; 
                 document.getElementById('amount').value = expToDup.amount; 
                 document.getElementById('category').value = expToDup.category; 
                 document.querySelector(`input[name="trans-type"][value="${expToDup.type}"]`).checked = true;
-                document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; // Date d'aujourd'hui
+                document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
                 
                 document.getElementById('modal-expense-title').innerText = "📋 Dupliquer l'opération"; 
                 document.getElementById('btn-submit-expense').innerText = "Ajouter";
                 document.getElementById('modal-expense').style.display = 'flex';
+            }
+        }
+
+        // ✏️ ÉDITER CATÉGORIE (NOUVEAU)
+        if(e.target.classList.contains('edit-cat')) {
+            const catId = e.target.dataset.id; const catToEdit = customCategories.find(x => x.id === catId);
+            if(catToEdit) {
+                editingCategoryId = catId;
+                document.getElementById('new-cat-emoji').value = catToEdit.emoji;
+                document.getElementById('new-cat-name').value = catToEdit.name;
+                document.getElementById('new-cat-limit').value = catToEdit.limit || '';
+                
+                document.getElementById('category-form-title').innerText = "✏️ Modifier la catégorie";
+                document.getElementById('btn-submit-category').innerText = "Enregistrer la modification";
+                document.getElementById('new-cat-name').focus();
             }
         }
 
@@ -428,14 +551,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fM = document.getElementById('filter-month'), fY = document.getElementById('filter-year');
     if(fM && fY) { ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'].forEach((m, i) => fM.appendChild(new Option(m, i))); const dNow = new Date(); for(let i = dNow.getFullYear()-1; i <= dNow.getFullYear()+1; i++) fY.appendChild(new Option(i, i)); fM.value = dNow.getMonth(); fY.value = dNow.getFullYear(); fM.addEventListener('change', updateUI); fY.addEventListener('change', updateUI); }
-    document.getElementById('toggle-proportional')?.addEventListener('change', (e) => { document.getElementById('expenseChart').style.display = e.target.checked ? 'none' : 'block'; document.getElementById('proportional-container').style.display = e.target.checked ? 'block' : 'none'; });
-    document.getElementById('auth-toggle-mode')?.addEventListener('click', () => { const t = document.getElementById('auth-title'); const b = document.getElementById('auth-submit-btn'); const l = document.getElementById('auth-toggle-mode'); const isLog = t.innerText === "Connexion"; t.innerText = isLog ? "Inscription" : "Connexion"; b.innerText = isLog ? "Créer mon compte" : "Se connecter"; l.innerText = isLog ? "Déjà un compte ? Connexion" : "Pas encore de compte ? S'inscrire"; });
+    document.getElementById('toggle-proportional')?.addEventListener('change', (e) => { document.getElementById('expenseChartContainer').style.display = e.target.checked ? 'none' : 'block'; document.getElementById('proportional-container').style.display = e.target.checked ? 'block' : 'none'; });
     
-    // THEME SELECTOR IS NOW IN SETTINGS (PROFILE)
     document.getElementById('settings-theme-selector')?.addEventListener('change', (e) => { 
         document.body.className = e.target.value === 'light' ? '' : `theme-${e.target.value}`; 
         localStorage.setItem('budgetTheme', e.target.value); 
-        renderAnnualChart(); // Met à jour les couleurs du graphique
+        renderAnnualChart(); 
     });
     
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
