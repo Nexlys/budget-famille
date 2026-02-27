@@ -44,7 +44,6 @@
 
         body { font-family: 'Nunito', sans-serif; background-color: var(--bg); color: var(--text); transition: background-color 0.5s, color 0.5s; display: flex; min-height: 100vh; line-height: 1.5; }
         
-        /* --- SIDEBAR --- */
         .sidebar { width: 270px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 25px 20px; position: fixed; top: 0; bottom: 0; transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1001; overflow-y: auto; border-right: 1px solid var(--border); }
         .sidebar.collapsed { transform: translateX(-270px); }
         .main-content { flex: 1; margin-left: 270px; padding: 30px; transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); width: 100%; max-width: 100%; }
@@ -66,8 +65,9 @@
         .action-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; align-items: center; width: 100%; }
 
         .fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; overflow-y:auto; }
-        #custom-dialog-overlay, #modal-expense, #modal-onboarding { background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); align-items: flex-start; padding-top: 5vh; }
-        .auth-box { background: var(--card-bg); padding: 40px; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); width: 100%; max-width: 450px; text-align: center; border: 1px solid var(--border); position: relative; margin-bottom: 5vh; margin-top:auto;}
+        /* 🛠️ CORRECTION CENTRAGE : .auth-box est maintenant parfaitement centré car j'ai retiré les "margin-top/bottom: auto" */
+        #custom-dialog-overlay, #modal-expense, #modal-onboarding, #modal-wrapup { background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); }
+        .auth-box { background: var(--card-bg); padding: 40px; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); width: 100%; max-width: 450px; text-align: center; border: 1px solid var(--border); position: relative; }
 
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; margin-bottom: 35px; width: 100%; align-items: start; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; align-items: start; width: 100%; }
@@ -78,7 +78,6 @@
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .card-header h3 { margin: 0 !important; font-size: 1.25em; font-weight: 800; color: var(--text); }
         
-        /* Boutons de réduction Cartes & Sections */
         .toggle-card-btn, .toggle-section-btn { background: var(--bg) !important; color: var(--text) !important; border: none !important; border-radius: 50% !important; width: 36px !important; height: 36px !important; display:flex; align-items:center; justify-content:center; padding: 0 !important; margin: 0 !important; cursor: pointer; transition: 0.3s; font-size: 1.1em; }
         .toggle-card-btn:hover, .toggle-section-btn:hover { background: var(--primary) !important; color: white !important; transform: scale(1.1); }
         
@@ -116,6 +115,7 @@
         .progress-fill { height: 100%; transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1); border-radius: 20px; }
         .green { background: var(--success); } .orange { background: #F2CC8F; } .red { background: var(--danger); }
 
+        /* --- TABLEAUX & TRI --- */
         .table-container { padding: 0; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 20px; background: var(--card-bg); box-shadow: 0 8px 24px rgba(0,0,0,0.03); border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; min-width: 600px; }
         th { padding: 18px 15px; text-align: left; border-bottom: 2px solid var(--bg); font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; color: var(--text); opacity: 0.6; font-weight: 800; }
@@ -156,6 +156,7 @@
         .bottom-nav-item span { font-size: 1.6em; transition: 0.3s; }
         .bottom-nav-item.active span { transform: scale(1.15); }
 
+        /* 📱 AMÉLIORATIONS MOBILES : CARTES ET SWIPE */
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.1); border-right:none; border-radius: 0 30px 30px 0; }
             .sidebar.mobile-open { transform: translateX(0); }
@@ -170,9 +171,23 @@
             .bottom-nav { display: flex; } 
             .balance { font-size: 1.8em; }
             h2 { font-size: 1.4em; }
+
+            /* Transformation du tableau en Cartes Swipeables sur mobile */
+            .table-container { background: transparent !important; box-shadow: none !important; border: none !important; padding:0 !important; }
+            table, tbody { display: block; width: 100%; }
+            thead { display: none; }
+            
+            /* Les lignes deviennent des cartes */
+            tr { 
+                display: block; position: relative; background: var(--card-bg); border-radius: 16px; 
+                margin-bottom: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+                border: 1px solid var(--border); touch-action: pan-y; z-index:2; 
+            }
+            td { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border: none !important; font-size: 0.95em; }
+            td::before { content: attr(data-label); font-weight: 800; opacity: 0.6; font-size: 0.85em; text-transform: uppercase; color: var(--primary); }
+            td:last-child { margin-top: 10px; border-top: 1px dashed var(--border) !important; padding-top: 12px; justify-content: space-around; } 
         }
         
-        /* Structure pour les Sections réductibles (Budget) */
         .section-header { display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid var(--border); padding-bottom:10px; margin-bottom: 20px; }
         .section-title { font-size:1.3em; font-weight:800; color:var(--text); margin:0; padding:0; border:none; }
         
@@ -194,7 +209,7 @@
             Gérez vos finances à deux sereinement. <br><br>
             <b>1.</b> Utilisez le gros bouton <b>+</b> pour noter vos dépenses.<br>
             <b>2.</b> Onglet <b>Budget</b> pour créer vos enveloppes.<br>
-            <b>3.</b> Onglet <b>Récurrents</b> pour vos abonnements.
+            <b>3.</b> Sur Mobile, glissez les dépenses à gauche ou à droite pour les modifier ou supprimer !
         </p>
         <div style="margin-bottom:25px; text-align:center; background:var(--bg); padding:12px; border-radius:12px;">
             <label style="display:inline-flex; align-items:center; gap:10px; font-weight:700; color:var(--text); cursor:pointer;">
@@ -202,6 +217,20 @@
             </label>
         </div>
         <button id="btn-finish-onboarding" style="width:100%; margin-top:0;">C'est parti ! 🚀</button>
+    </div>
+</div>
+
+<div id="modal-wrapup" class="fullscreen-overlay" style="display:none; z-index: 6000;">
+    <div class="auth-box" style="padding: 40px 25px; position:relative; overflow:hidden;">
+        <button id="btn-close-wrapup" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6; cursor:pointer;">✕</button>
+        <h1 style="font-size:3.5em; margin:0 0 10px 0;">🎆</h1>
+        <h2 style="color:var(--primary); font-weight:800; margin-top:0;">Bilan Mensuel !</h2>
+        <p id="wrapup-text" style="font-size:1.05em; color:var(--text); font-weight:600; line-height:1.6; margin-bottom:20px;">
+            Calcul en cours...
+        </p>
+        <div id="wrapup-stats" style="display:flex; justify-content:space-around; background:var(--bg); padding:15px; border-radius:16px; margin-bottom:25px; gap:10px;">
+            </div>
+        <button id="btn-finish-wrapup" style="width:100%; margin-top:0;">Génial ! Continuer</button>
     </div>
 </div>
 
@@ -244,6 +273,7 @@
                 <label style="font-size:0.85em; font-weight:800; margin-left:5px; opacity:0.7; color:var(--success);">Lier à l'objectif :</label>
                 <select id="goal-selector" style="margin-top:2px; border-color:var(--success);"></select>
             </div>
+            
             <div style="margin-top:15px; margin-bottom:10px;">
                 <label for="receipt-upload" class="btn-small" style="display:block; text-align:center; cursor:pointer; background:var(--bg); border:1px dashed var(--primary); color:var(--primary); padding:12px !important; font-weight:800;">
                     📸 Ajouter un justificatif (Optionnel)

@@ -129,6 +129,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onAuthStateChanged(auth, async (user) => { currentUserObj = user; if (user) { await updateDoc(doc(db, "users", user.uid), { lastLogin: Date.now() }).catch(e=>{}); } renderAppState(); });
 
+    async function checkWrapUp() {
+        if(!currentUserObj || !CURRENT_BUDGET_ID) return;
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}`;
+        
+        const uRef = doc(db, "users", currentUserObj.uid);
+        const uSnap = await getDoc(uRef);
+        if(!uSnap.exists()) return;
+        
+        const uData = uSnap.data();
+        
+        // S'il n'a pas encore vu le wrap-up de ce mois-ci
+        if (uData.lastWrapUp !== currentMonthKey) {
+            let lastDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            let prevMonth = lastDate.getMonth();
+            let prevYear = lastDate.getFullYear();
+            
+            let prevExpenses = expenses.filter(e => new Date(e.timestamp).getMonth() === prevMonth && new Date(e.timestamp).getFullYear() === prevYear);
+            
+            if (prevExpenses.length > 0) {
+                let tDep = 0, tInc = 0, cats = {};
+                prevExpenses.forEach(e => {
+                    if(e.type === 'income') tInc += e.amount;
+                    else { tDep += e.amount; cats[e.category] = (cats[e.category] || 0) + e.amount; }
+                });
+                let topCat = Object.keys(cats).length > 0 ? Object.keys(cats).reduce((a, b) => cats[a] > cats[b] ? a : b) : "Aucune";
+                
+                const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+                
+                document.getElementById('wrapup-text').innerHTML = `Félicitations pour le mois de <b>${monthNames[prevMonth]} ${prevYear}</b> ! 🎉<br>Voici le bilan financier de votre foyer :`;
+                document.getElementById('wrapup-stats').innerHTML = `
+                    <div style="text-align:center;"><span style="font-size:0.8em; opacity:0.7;">Dépensé</span><br><strong style="color:var(--danger);">${tDep.toFixed(0)}€</strong></div>
+                    <div style="text-align:center;"><span style="font-size:0.8em; opacity:0.7;">Économisé</span><br><strong style="color:var(--success);">${(tInc - tDep).toFixed(0)}€</strong></div>
+                    <div style="text-align:center;"><span style="font-size:0.8em; opacity:0.7;">Top Cat.</span><br><strong style="color:var(--primary);">${topCat.substring(0,10)}</strong></div>
+                `;
+                
+                document.getElementById('modal-wrapup').style.display = 'flex';
+                fireConfetti();
+            }
+            await updateDoc(uRef, { lastWrapUp: currentMonthKey });
+        }
+    }
+    
+    document.getElementById('btn-close-wrapup')?.addEventListener('click', () => document.getElementById('modal-wrapup').style.display = 'none');
+    document.getElementById('btn-finish-wrapup')?.addEventListener('click', () => document.getElementById('modal-wrapup').style.display = 'none');
+
     async function renderAppState() {
         if (isMaintenance && (!currentUserObj || currentUserObj.uid !== ADMIN_UID)) { screenMaintenance.style.display = 'flex'; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; screenApp.style.display = 'none'; if (currentUserObj) await signOut(auth); return; }
         screenMaintenance.style.display = 'none';
@@ -152,18 +198,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- LOGIQUE DU TUTORIEL ---
-    document.getElementById('btn-close-onboarding')?.addEventListener('click', () => {
-        document.getElementById('modal-onboarding').style.display = 'none';
-        // Ne sauvegarde rien : le reverra au prochain rafraîchissement s'il n'a pas coché la case et cliqué "C'est parti"
-    });
-
+    document.getElementById('btn-close-onboarding')?.addEventListener('click', () => { document.getElementById('modal-onboarding').style.display = 'none'; });
     document.getElementById('btn-finish-onboarding')?.addEventListener('click', async () => {
         document.getElementById('modal-onboarding').style.display = 'none';
         const neverShow = document.getElementById('chk-never-show')?.checked;
-        if(neverShow && currentUserObj) {
-            await updateDoc(doc(db, "users", currentUserObj.uid), { onboardingDone: true });
-        }
+        if(neverShow && currentUserObj) { await updateDoc(doc(db, "users", currentUserObj.uid), { onboardingDone: true }); }
     });
 
     document.getElementById('toggle-password')?.addEventListener('click', (e) => { const pwdInput = document.getElementById('auth-password'); if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } else { pwdInput.type = 'password'; e.target.innerText = '👁️'; } });
@@ -308,6 +347,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ÉCOUTEUR MOBILE POUR LE SWIPE
+    function bindSwipeEvents() {
+        if(window.innerWidth > 850) return; // Uniquement sur mobile
+        
+        document.querySelectorAll('#expense-list tr').forEach(tr => {
+            let startX = 0;
+            let currentX = 0;
+            
+            tr.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                tr.style.transition = 'none';
+            }, {passive: true});
+            
+            tr.addEventListener('touchmove', (e) => {
+                currentX = e.touches[0].clientX;
+                let diff = currentX - startX;
+                
+                if (diff > 120) diff = 120; // Max droite
+                if (diff < -120) diff = -120; // Max gauche
+                
+                tr.style.transform = `translateX(${diff}px)`;
+                
+                if(diff < -50) tr.style.backgroundColor = "rgba(224, 122, 95, 0.2)"; // Rouge (Delete)
+                else if(diff > 50) tr.style.backgroundColor = "rgba(129, 178, 154, 0.2)"; // Vert (Edit)
+                else tr.style.backgroundColor = "var(--card-bg)";
+                
+            }, {passive: true});
+            
+            tr.addEventListener('touchend', () => {
+                tr.style.transition = 'transform 0.3s, background-color 0.3s';
+                tr.style.transform = 'translateX(0)';
+                tr.style.backgroundColor = "var(--card-bg)";
+                
+                let diff = currentX - startX;
+                if(diff < -80) {
+                    // Supprimer
+                    const deleteBtn = tr.querySelector('.delete-exp');
+                    if(deleteBtn) deleteBtn.click();
+                } else if(diff > 80) {
+                    // Modifier
+                    const editBtn = tr.querySelector('.edit-exp');
+                    if(editBtn) editBtn.click();
+                }
+            });
+        });
+    }
+
     function updateUI() {
         const list = document.getElementById('expense-list'); if(!list) return;
         list.innerHTML = ""; 
@@ -324,14 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
             if(!memberStats[currentPayerId]) memberStats[currentPayerId] = { name: e.payer || "Ancien Profil", rev: 0, dep: 0 };
             
-            if(isInc) { 
-                globalRev += e.amount; 
-                memberStats[currentPayerId].rev += e.amount; 
-            } else { 
-                globalDep += e.amount; 
-                memberStats[currentPayerId].dep += e.amount; 
-                catSums[e.category] = (catSums[e.category] || 0) + e.amount; 
-            }
+            if(isInc) { globalRev += e.amount; memberStats[currentPayerId].rev += e.amount; } 
+            else { globalDep += e.amount; memberStats[currentPayerId].dep += e.amount; catSums[e.category] = (catSums[e.category] || 0) + e.amount; }
         });
 
         const monthKey = `${y}-${String(m+1).padStart(2, '0')}`;
@@ -402,8 +482,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let receiptIcon = e.receiptUrl ? `<a href="${e.receiptUrl}" target="_blank" title="Voir le justificatif" style="text-decoration:none; margin-left:5px; font-size:1.2em;">📎</a>` : '';
 
-                tr.innerHTML = `<td>${e.date}</td><td>${e.desc} ${receiptIcon}</td><td><small style="background:var(--bg); padding:6px 10px; border-radius:12px; font-weight:700;">${e.category}</small></td><td><strong>${memberStats[currentPayerId]?.name || e.payer}</strong></td><td style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
-                <td style="white-space:nowrap;">
+                tr.innerHTML = `<td data-label="Date">${e.date}</td><td data-label="Description">${e.desc} ${receiptIcon}</td><td data-label="Catégorie"><small style="background:var(--bg); padding:6px 10px; border-radius:12px; font-weight:700;">${e.category}</small></td><td data-label="Par"><strong>${memberStats[currentPayerId]?.name || e.payer}</strong></td><td data-label="Montant" style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
+                <td data-label="Actions" style="white-space:nowrap;">
                     <button class="duplicate-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Dupliquer">📋</button>
                     <button class="edit-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Modifier">✏️</button>
                     <button class="delete-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Supprimer">🗑️</button>
@@ -411,6 +491,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 list.appendChild(tr);
             });
         }
+        
+        // Ajout des écouteurs de Swipe sur Mobile
+        bindSwipeEvents();
 
         document.getElementById('total-revenus').innerText = globalRev.toFixed(2) + ' €'; 
         document.getElementById('total-depenses').innerText = globalDep.toFixed(2) + ' €';
@@ -521,7 +604,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(isDataLoaded) return; isDataLoaded = true; screenApp.style.display = 'block'; document.getElementById('fab-add-expense').style.display='flex';
         getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(d => { if(d.exists()) document.getElementById('display-invite-code').innerText = d.data().code; });
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/members`), s => { members = []; s.forEach(doc => members.push({ id: doc.id, ...doc.data() })); const me = members.find(mbr => mbr.id === auth.currentUser.uid); if(me && document.getElementById('admin-pseudo')) document.getElementById('admin-pseudo').value = me.name; renderMembers(); updateUI(); }));
-        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => { expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); updateUI(); }));
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => { 
+            expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); 
+            updateUI(); 
+            // Appel à la fonction de vérification du Wrap-Up une fois les dépenses chargées
+            checkWrapUp();
+        }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), s => { customCategories = []; s.forEach(doc => customCategories.push({ id: doc.id, ...doc.data() })); renderCategories(); updateUI(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), s => { goals = []; s.forEach(doc => goals.push({ id: doc.id, ...doc.data() })); renderGoals(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); checkReminders(); }));
@@ -549,80 +637,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable ! Vérifiez avec votre partenaire.", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    async function saveExpense(type, amount, cat, desc, dateVal) {
-        let savedReceiptUrl = null;
-        if(receiptFile) {
-            document.getElementById('btn-submit-expense').innerText = "Envoi de l'image...";
-            document.getElementById('btn-submit-expense').disabled = true;
-            try {
-                const storageRef = ref(storage, `budgets/${CURRENT_BUDGET_ID}/receipts/${Date.now()}_${receiptFile.name}`);
-                await uploadBytes(storageRef, receiptFile);
-                savedReceiptUrl = await getDownloadURL(storageRef);
-            } catch(e) {
-                console.error(e);
-                await customAlert("Erreur lors de l'envoi de la photo. Vérifiez que votre projet Firebase est bien configuré sur la facturation Blaze.");
-            }
-            document.getElementById('btn-submit-expense').disabled = false;
-        }
-
-        if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
-            const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
-            if(targetGoal) {
-                await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
-                if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
-            }
-        } 
-        
-        const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
-        const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
-        
-        const expenseData = { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type };
-        if(savedReceiptUrl) expenseData.receiptUrl = savedReceiptUrl;
-
-        if(editingExpenseId) {
-            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), expenseData);
-            editingExpenseId = null; 
-        } else {
-            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), expenseData); 
-        }
-    }
-
-    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { 
-        e.preventDefault(); 
-        await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value, document.getElementById('expense-date').value); 
-        e.target.reset(); 
-        document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
-        document.getElementById('payer').value = auth.currentUser.uid; 
-        receiptFile = null; document.getElementById('receipt-preview').innerText = "";
-        document.getElementById('modal-expense').style.display = 'none'; 
-        
-        document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
-        document.getElementById('btn-submit-expense').innerText = "Ajouter";
-    });
-
-    document.getElementById('category-form')?.addEventListener('submit', async (e) => { 
-        e.preventDefault(); 
-        const em = document.getElementById('new-cat-emoji').value;
-        const nom = document.getElementById('new-cat-name').value;
-        const lim = parseFloat(document.getElementById('new-cat-limit').value) || null;
-
-        if(editingCategoryId) {
-            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, editingCategoryId), { emoji: em, name: nom, limit: lim });
-            editingCategoryId = null;
-            document.getElementById('btn-submit-category').innerText = "+ Ajouter";
-            document.getElementById('category-form-title').innerText = "Gérer les Catégories";
-        } else {
-            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: em, name: nom, limit: lim }); 
-        }
-        e.target.reset(); 
-    });
-
-    document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value), archived: false }); e.target.reset(); });
-
-    // --- GESTION DES CLICS MULTIPLES (CARTES & SECTIONS) ---
     document.addEventListener('click', async (e) => {
         
-        // Clic sur les boutons de cartes du Dashboard
         if(e.target.closest('.toggle-card-btn')) { 
             const btn = e.target.closest('.toggle-card-btn'); 
             const content = btn.closest('.card').querySelector('.card-content'); 
@@ -634,7 +650,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
 
-        // NOUVEAU: Clic sur les boutons de sections (Onglet Budget)
         if(e.target.closest('.toggle-section-btn')) { 
             const btn = e.target.closest('.toggle-section-btn'); 
             const content = btn.closest('.section-header').nextElementSibling; 
