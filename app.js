@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-// NOUVEAU : Import Firebase Storage pour les photos
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 // 🔴 1. REMPLACEZ PAR VOS CLÉS FIREBASE
@@ -18,14 +17,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const storage = getStorage(app); // Initialisation Storage
+const storage = getStorage(app); 
 
 // 👑 2. REMPLACEZ CECI PAR VOTRE UID FIREBASE ADMIN
 const ADMIN_UID = "7AsUY4KcNDaWB33X4A2n2UfxOvO2"; 
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- 🛠️ SYSTÈME DE POP-UP PERSONNALISÉ ---
     function customAlert(message, title = "Information") {
         return new Promise((resolve) => {
             const overlay = document.getElementById('custom-dialog-overlay');
@@ -54,9 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialisation des dates
     const todayISO = new Date().toISOString().split('T')[0];
     if(document.getElementById('expense-date')) document.getElementById('expense-date').value = todayISO;
+    if(document.getElementById('quick-date')) document.getElementById('quick-date').value = todayISO;
 
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
@@ -86,16 +84,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingExpenseId = null; let editingCategoryId = null;
     let deferredPrompt; 
     let sortCol = 'date'; let sortAsc = false;
-    let currentQuickFilter = 'all'; // Filtres rapides
+    let currentQuickFilter = 'all';
 
-    // --- UPLOAD DE TICKET DE CAISSE ---
     let receiptFile = null;
     document.getElementById('receipt-upload')?.addEventListener('change', (e) => {
         receiptFile = e.target.files[0];
         document.getElementById('receipt-preview').innerText = receiptFile ? `📎 Image attachée : ${receiptFile.name}` : "";
     });
 
-    // --- THÈME AUTOMATIQUE ---
     function applyTheme(themeValue) {
         if(themeValue === 'auto') {
             const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -106,12 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAnnualChart();
     }
     
-    // Écoute des changements de préférence système si sur "auto"
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         if(localStorage.getItem('budgetTheme') === 'auto') applyTheme('auto');
     });
 
-    // --- 🌍 GESTION RÉSEAU & INSTALLATION PWA ---
     window.addEventListener('online', () => document.getElementById('status-indicator').innerText = "● Connecté");
     window.addEventListener('offline', () => { document.getElementById('status-indicator').innerText = "● Hors-ligne"; document.getElementById('status-indicator').style.color = "var(--danger)"; });
 
@@ -146,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; 
                     loadBudgetData(); 
                     
-                    // Tutoriel Onboarding pour les nouveaux
                     if(!userDoc.data().onboardingDone) {
                         document.getElementById('modal-onboarding').style.display = 'flex';
                     }
@@ -159,16 +152,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- LOGIQUE DU TUTORIEL ---
+    document.getElementById('btn-close-onboarding')?.addEventListener('click', () => {
+        document.getElementById('modal-onboarding').style.display = 'none';
+        // Ne sauvegarde rien : le reverra au prochain rafraîchissement s'il n'a pas coché la case et cliqué "C'est parti"
+    });
+
     document.getElementById('btn-finish-onboarding')?.addEventListener('click', async () => {
         document.getElementById('modal-onboarding').style.display = 'none';
-        if(currentUserObj) await updateDoc(doc(db, "users", currentUserObj.uid), { onboardingDone: true });
+        const neverShow = document.getElementById('chk-never-show')?.checked;
+        if(neverShow && currentUserObj) {
+            await updateDoc(doc(db, "users", currentUserObj.uid), { onboardingDone: true });
+        }
     });
 
     document.getElementById('toggle-password')?.addEventListener('click', (e) => { const pwdInput = document.getElementById('auth-password'); if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } else { pwdInput.type = 'password'; e.target.innerText = '👁️'; } });
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
     document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now(), onboardingDone: false }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
 
-    // --- NAVIGATION ---
     function switchView(viewElement, navId, bnavId) {
         viewDashboard.style.display = 'none'; viewBudget.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; 
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
@@ -212,6 +213,24 @@ document.addEventListener('DOMContentLoaded', () => {
         receiptFile = null; document.getElementById('receipt-preview').innerText = "";
         document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
         document.getElementById('btn-submit-expense').innerText = "Ajouter";
+    });
+
+    document.getElementById('btn-edit-carryover')?.addEventListener('click', async () => {
+        const m = parseInt(document.getElementById('filter-month').value);
+        const y = parseInt(document.getElementById('filter-year').value);
+        const monthKey = `${y}-${String(m+1).padStart(2, '0')}`;
+        const currentVal = monthlySettings.find(s => s.id === monthKey)?.carryOver || 0;
+        
+        const val = prompt("Saisissez le solde restant d'avant votre paie (Report du mois précédent) :\n(Mettez 0 pour annuler)", currentVal);
+        if(val !== null && val.trim() !== "") {
+            const num = parseFloat(val.replace(',', '.'));
+            if(!isNaN(num)) {
+                await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/monthly_settings`, monthKey), { carryOver: num }, { merge: true });
+                customAlert("Solde reporté mis à jour !");
+            } else {
+                customAlert("Veuillez entrer un nombre valide.", "Erreur");
+            }
+        }
     });
     
     function fireConfetti() {
@@ -271,7 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.reset(); customAlert("Événement ajouté au calendrier !", "Succès"); 
     });
 
-    // --- FILTRES RAPIDES ---
     document.querySelectorAll('.qf-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
@@ -281,7 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- GESTION DU TRI DU TABLEAU ---
     document.querySelectorAll('th.sortable').forEach(th => {
         th.addEventListener('click', () => {
             const col = th.dataset.sort;
@@ -322,7 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
         globalRev += carryOver; 
         document.getElementById('carryover-amount').innerText = carryOver.toFixed(2) + ' €';
 
-        // 🤖 LOGIQUE DU MINI-COACH
         let coachMsg = "Tout va bien pour le moment ! 😊";
         const envCats = customCategories.filter(c => c.limit && c.limit > 0);
         if(envCats.length > 0) {
@@ -339,7 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         document.getElementById('coach-msg').innerText = coachMsg;
 
-        // Application du Filtre Rapide + Recherche Texte
         let filteredExpenses = monthlyExpenses;
         
         if (currentQuickFilter !== 'all') {
@@ -353,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
             filteredExpenses = filteredExpenses.filter(e => e.desc.toLowerCase().includes(currentSearch) || e.category.toLowerCase().includes(currentSearch));
         }
 
-        // Toujours afficher le résumé si on filtre d'une manière ou d'une autre
         if (currentSearch !== "" || currentQuickFilter !== 'all') {
             filteredExpenses.forEach(e => { if(e.type === 'income') searchSum += e.amount; else searchSum -= e.amount; });
             document.getElementById('search-summary').style.display = 'block';
@@ -362,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('search-summary').style.display = 'none';
         }
 
-        // Tri
         filteredExpenses.sort((a, b) => {
             let valA, valB;
             if(sortCol === 'date') { valA = a.timestamp; valB = b.timestamp; }
@@ -387,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 let currentPayerId = e.payerId || (members.find(mbr => mbr.name === e.payer)?.id) || 'inconnu';
                 const tr = document.createElement('tr'); 
                 
-                // Intégration de l'icône photo si un reçu est attaché
                 let receiptIcon = e.receiptUrl ? `<a href="${e.receiptUrl}" target="_blank" title="Voir le justificatif" style="text-decoration:none; margin-left:5px; font-size:1.2em;">📎</a>` : '';
 
                 tr.innerHTML = `<td>${e.date}</td><td>${e.desc} ${receiptIcon}</td><td><small style="background:var(--bg); padding:6px 10px; border-radius:12px; font-weight:700;">${e.category}</small></td><td><strong>${memberStats[currentPayerId]?.name || e.payer}</strong></td><td style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
@@ -449,7 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } 
     }
     
-    // 🏆 GESTION DES OBJECTIFS ET DU MUR DES TROPHÉES
     function renderGoals() { 
         const cont = document.getElementById('goals-container'); 
         const tropCont = document.getElementById('trophies-container');
@@ -465,13 +476,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const p = Math.min((g.current / g.target) * 100, 100); 
             
             if(g.archived) {
-                // Affichage Trophée
                 hasTrophies = true;
                 const tCard = document.createElement('div'); tCard.className = 'trophy-card';
                 tCard.innerHTML = `<div class="trophy-icon">🏆</div><h3 style="margin:0; font-size:1.2em;">${g.name}</h3><p style="margin:5px 0 0 0; font-weight:800; opacity:0.9;">${g.target}€ atteint !</p>`;
                 tropCont.appendChild(tCard);
             } else {
-                // Affichage Objectif en cours
                 const card = document.createElement('div'); card.className = 'card'; 
                 
                 let archiveBtnHtml = "";
@@ -496,8 +505,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const isDark = document.body.classList.contains('theme-dark'); const chartColors = isDark ? {inc: '#81B29A', exp: '#E07A5F', text: '#EAE4D9'} : {inc: '#81B29A', exp: '#E07A5F', text: '#5C5346'};
     myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: chartColors.inc, borderRadius: 6 }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: chartColors.exp, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: chartColors.text } }, y: { ticks: { color: chartColors.text } } }, plugins: { legend: { labels: { color: chartColors.text, font: {family: 'Nunito', weight: 'bold'} } } } } }); }
 
-    // --- FRAIS FIXES ---
-    document.getElementById('sub-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), { name: document.getElementById('sub-name').value, amount: parseFloat(document.getElementById('sub-amount').value), category: document.getElementById('sub-category').value, day: parseInt(document.getElementById('sub-day').value) }); e.target.reset(); customAlert("Abonnement enregistré avec succès !", "C'est noté"); });
     function renderSubs() { 
         const list = document.getElementById('subs-list'); const totLabel = document.getElementById('total-subs-amount'); if(!list || !totLabel) return; 
         list.innerHTML = ""; let total = 0; 
@@ -510,7 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
         totLabel.innerText = total.toFixed(2) + " €"; 
     }
 
-    // --- CHARGEMENT DATA FIREBASE ---
     function loadBudgetData() {
         if(isDataLoaded) return; isDataLoaded = true; screenApp.style.display = 'block'; document.getElementById('fab-add-expense').style.display='flex';
         getDoc(doc(db, "budgets", CURRENT_BUDGET_ID)).then(d => { if(d.exists()) document.getElementById('display-invite-code').innerText = d.data().code; });
@@ -523,7 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/monthly_settings`), s => { monthlySettings = []; s.forEach(doc => monthlySettings.push({ id: doc.id, ...doc.data() })); updateUI(); }));
     }
 
-    // --- LOGIQUE ADMINISTRATION ---
     async function loadAdminData() {
         if(auth.currentUser.uid !== ADMIN_UID) return; 
         const now = Date.now(); const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000); let activeCount = 0;
@@ -540,14 +545,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('search-admin-users')?.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); document.querySelectorAll('#admin-user-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; }); });
     document.getElementById('search-admin-budgets')?.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); document.querySelectorAll('#admin-budget-list tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; }); });
 
-    // --- SETUP & PROFIL ---
     document.getElementById('btn-create-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom.", "Oups"); const code = Math.random().toString(36).substring(2, 8).toUpperCase(); const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid }); await setDoc(doc(db, "budgets", ref.id, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: ref.id }, { merge: true }); window.location.reload(); });
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable ! Vérifiez avec votre partenaire.", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // --- FORMULAIRE DÉPENSE (AVEC IMAGE) ---
     async function saveExpense(type, amount, cat, desc, dateVal) {
-        // Optionnel : Envoi d'une photo de ticket
         let savedReceiptUrl = null;
         if(receiptFile) {
             document.getElementById('btn-submit-expense').innerText = "Envoi de l'image...";
@@ -558,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 savedReceiptUrl = await getDownloadURL(storageRef);
             } catch(e) {
                 console.error(e);
-                await customAlert("Erreur lors de l'envoi de la photo. La dépense sera sauvegardée sans image.");
+                await customAlert("Erreur lors de l'envoi de la photo. Vérifiez que votre projet Firebase est bien configuré sur la facturation Blaze.");
             }
             document.getElementById('btn-submit-expense').disabled = false;
         }
@@ -617,9 +619,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value), archived: false }); e.target.reset(); });
 
-    // --- GESTION DES CLICS MULTIPLES ---
+    // --- GESTION DES CLICS MULTIPLES (CARTES & SECTIONS) ---
     document.addEventListener('click', async (e) => {
-        if(e.target.classList.contains('toggle-card-btn')) { const btn = e.target; const content = btn.closest('.card').querySelector('.card-content'); if(content) { const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; btn.innerHTML = isHidden ? '➖' : '➕'; } return; }
+        
+        // Clic sur les boutons de cartes du Dashboard
+        if(e.target.closest('.toggle-card-btn')) { 
+            const btn = e.target.closest('.toggle-card-btn'); 
+            const content = btn.closest('.card').querySelector('.card-content'); 
+            if(content) { 
+                const isHidden = content.style.display === 'none'; 
+                content.style.display = isHidden ? 'block' : 'none'; 
+                btn.innerHTML = isHidden ? '➖' : '➕'; 
+            } 
+            return; 
+        }
+
+        // NOUVEAU: Clic sur les boutons de sections (Onglet Budget)
+        if(e.target.closest('.toggle-section-btn')) { 
+            const btn = e.target.closest('.toggle-section-btn'); 
+            const content = btn.closest('.section-header').nextElementSibling; 
+            if(content && content.classList.contains('section-content')) { 
+                const isHidden = content.style.display === 'none'; 
+                content.style.display = isHidden ? '' : 'none'; 
+                btn.innerHTML = isHidden ? '➖' : '➕'; 
+            } 
+            return; 
+        }
         
         if(e.target.classList.contains('edit-exp')) {
             const expId = e.target.dataset.id; const expToEdit = expenses.find(x => x.id === expId);
@@ -668,7 +693,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Trophées
         if(e.target.classList.contains('archive-goal')) {
             if(await customConfirm("Bravo ! Voulez-vous envoyer cet objectif dans le Mur des Trophées ?", "Projet accompli !")) {
                 await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, e.target.dataset.id), { archived: true });
