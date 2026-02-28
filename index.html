@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Budget Duo</title>
+    <title>LifeBudget</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -44,6 +44,7 @@
 
         body { font-family: 'Nunito', sans-serif; background-color: var(--bg); color: var(--text); transition: background-color 0.5s, color 0.5s; display: flex; min-height: 100vh; line-height: 1.5; }
         
+        /* --- SIDEBAR --- */
         .sidebar { width: 270px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 25px 20px; position: fixed; top: 0; bottom: 0; transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1001; overflow-y: auto; border-right: 1px solid var(--border); }
         .sidebar.collapsed { transform: translateX(-270px); }
         .main-content { flex: 1; margin-left: 270px; padding: 30px; transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); width: 100%; max-width: 100%; }
@@ -65,7 +66,6 @@
         .action-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; align-items: center; width: 100%; }
 
         .fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; overflow-y:auto; }
-        /* 🛠️ CORRECTION CENTRAGE : .auth-box est maintenant parfaitement centré car j'ai retiré les "margin-top/bottom: auto" */
         #custom-dialog-overlay, #modal-expense, #modal-onboarding, #modal-wrapup { background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); }
         .auth-box { background: var(--card-bg); padding: 40px; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); width: 100%; max-width: 450px; text-align: center; border: 1px solid var(--border); position: relative; }
 
@@ -91,6 +91,7 @@
         button { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 18px; cursor: pointer; font-weight: 800; font-size: 1.05em; width: 100%; margin-top: 20px; transition: 0.3s; font-family: inherit; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
         button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 163, 115, 0.4); }
         button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .btn-small { width: auto !important; margin: 0 !important; padding: 10px 20px !important; font-size: 0.9em; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.02); border-radius: 14px; cursor:pointer;}
         .btn-small:hover { background: var(--bg); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: var(--primary); border-color: var(--primary); }
@@ -172,12 +173,10 @@
             .balance { font-size: 1.8em; }
             h2 { font-size: 1.4em; }
 
-            /* Transformation du tableau en Cartes Swipeables sur mobile */
             .table-container { background: transparent !important; box-shadow: none !important; border: none !important; padding:0 !important; }
             table, tbody { display: block; width: 100%; }
             thead { display: none; }
             
-            /* Les lignes deviennent des cartes */
             tr { 
                 display: block; position: relative; background: var(--card-bg); border-radius: 16px; 
                 margin-bottom: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
@@ -204,7 +203,7 @@
     <div class="auth-box" style="padding: 40px 25px; position:relative;">
         <button id="btn-close-onboarding" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6; cursor:pointer;">✕</button>
         <h1 style="font-size:3em; margin:0 0 10px 0;">👋</h1>
-        <h2 style="color:var(--primary); font-weight:800; margin-top:0;">Bienvenue sur Budget Duo !</h2>
+        <h2 style="color:var(--primary); font-weight:800; margin-top:0;">Bienvenue sur LifeBudget !</h2>
         <p style="font-size:1.05em; color:var(--text); font-weight:600; line-height:1.6; margin-bottom:20px;">
             Gérez vos finances à deux sereinement. <br><br>
             <b>1.</b> Utilisez le gros bouton <b>+</b> pour noter vos dépenses.<br>
@@ -235,7 +234,7 @@
 </div>
 
 <div id="custom-dialog-overlay" class="fullscreen-overlay" style="display:none; z-index: 5000;">
-    <div class="auth-box" style="border: none; padding: 35px 25px; margin-top:auto; margin-bottom:auto;">
+    <div class="auth-box" style="border: none; padding: 35px 25px;">
         <h2 id="custom-dialog-title" style="color: var(--primary); margin-top:0; font-weight:800;">Information</h2>
         <p id="custom-dialog-msg" style="color: var(--text); font-size: 1.05em; margin-bottom: 30px; line-height:1.6; font-weight:600;"></p>
         <div id="custom-dialog-btns" style="display: flex; gap: 15px; justify-content: center; flex-wrap:wrap;"></div>
@@ -248,7 +247,8 @@
     <div class="auth-box" style="position:relative; text-align:left;">
         <button id="btn-close-expense-modal" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6; cursor:pointer;">✕</button>
         <h2 id="modal-expense-title" style="color: var(--primary); margin-top:0; font-weight:800; text-align:center;">✨ Nouvelle Opération</h2>
-        <form id="expense-form">
+        
+        <form id="expense-form" onsubmit="event.preventDefault();">
             <div class="transaction-type-toggle">
                 <label class="radio-label"><input type="radio" name="trans-type" value="expense" checked><span class="radio-btn">📉 Dépense</span></label>
                 <label class="radio-label"><input type="radio" name="trans-type" value="income"><span class="radio-btn">📈 Revenu</span></label>
@@ -291,7 +291,7 @@
         <button id="btn-close-feedback" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6;">✕</button>
         <h2 style="color: var(--primary); margin-top:0; font-weight:800;">💡 Une idée ? Un bug ?</h2>
         <p style="font-size:0.95em; color:var(--text); opacity:0.7; margin-bottom:20px; font-weight:600;">Envoyez votre message directement à l'administrateur !</p>
-        <form id="feedback-form">
+        <form id="feedback-form" onsubmit="event.preventDefault();">
             <textarea id="feedback-text" rows="4" placeholder="Décrivez votre idée ou le problème rencontré..." required></textarea>
             <button type="submit" style="margin-top:20px;">Envoyer le message</button>
         </form>
@@ -302,16 +302,16 @@
     <div class="auth-box" style="border: 2px dashed var(--danger);">
         <h1 style="font-size: 4em; margin: 0 0 15px 0;">🛠️</h1>
         <h2 style="color: var(--danger); margin-top:0; font-weight:800;">Maintenance en cours</h2>
-        <p style="color: var(--text); font-size: 1.05em; font-weight:600; line-height:1.6;">Budget Duo est actuellement en cours de mise à jour pour vous offrir de nouvelles fonctionnalités.<br><br>Veuillez revenir un peu plus tard !</p>
+        <p style="color: var(--text); font-size: 1.05em; font-weight:600; line-height:1.6;">LifeBudget est actuellement en cours de mise à jour pour vous offrir de nouvelles fonctionnalités.<br><br>Veuillez revenir un peu plus tard !</p>
         <span id="btn-admin-bypass" style="display:block; margin-top:35px; font-size:1.5em; opacity:0.1; cursor:pointer;" title="Accès technique">🔒</span>
     </div>
 </div>
 
 <div id="screen-auth" class="fullscreen-overlay">
     <div class="auth-box">
-        <h1 style="color: var(--primary); margin-bottom: 5px; font-weight:800; font-size:2.2em;">💎 Budget Duo</h1>
+        <h1 style="color: var(--primary); margin-bottom: 5px; font-weight:800; font-size:2.2em;">💎 LifeBudget</h1>
         <h3 id="auth-title" style="margin-bottom: 25px; opacity:0.7;">Connexion</h3>
-        <form id="login-form">
+        <form id="login-form" onsubmit="event.preventDefault();">
             <input type="email" id="auth-email" required placeholder="Adresse email">
             <div style="position:relative;">
                 <input type="password" id="auth-password" required placeholder="Mot de passe" style="padding-right: 45px;">
@@ -337,7 +337,7 @@
 </div>
 
 <nav class="sidebar" id="sidebar">
-    <h2>💎 Budget Duo</h2>
+    <h2>💎 LifeBudget</h2>
     <ul class="nav-menu">
         <li id="nav-dashboard" class="nav-item active"><span>🏠</span> Accueil</li>
         <li id="nav-budget" class="nav-item"><span>🎯</span> Mon Budget</li>
@@ -489,13 +489,13 @@
         <div class="section-content layout-split" style="margin-bottom:40px;">
             <div class="card" style="background:rgba(212, 163, 115, 0.05); border:1px dashed var(--primary);">
                 <h4 style="margin-top:0; font-size:1.2em; color:var(--text);">Créer un Objectif</h4>
-                <form id="goal-form"><input type="text" id="goal-name" placeholder="Ex: Voyage Japon" required><input type="number" id="goal-target" placeholder="Cible en €" required><button type="submit" class="btn-small" style="background:var(--primary); color:white; width:100% !important; margin-top:15px !important;">+ Créer</button></form>
+                <form id="goal-form" onsubmit="event.preventDefault();"><input type="text" id="goal-name" placeholder="Ex: Voyage Japon" required><input type="number" id="goal-target" placeholder="Cible en €" required><button type="submit" class="btn-small" style="background:var(--primary); color:white; width:100% !important; margin-top:15px !important;">+ Créer</button></form>
                 <ul id="goal-manage-list" style="list-style:none; padding:0; margin-top:20px;"></ul>
             </div>
             
             <div class="card" style="background:rgba(212, 163, 115, 0.05); border:1px dashed var(--primary);">
                 <h4 id="category-form-title" style="margin-top:0; font-size:1.2em; color:var(--text);">Gérer les Catégories</h4>
-                <form id="category-form">
+                <form id="category-form" onsubmit="event.preventDefault();">
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="new-cat-emoji" placeholder="🏠" style="width:65px; text-align:center; font-size:1.2em;" required>
                         <input type="text" id="new-cat-name" placeholder="Nom (Ex: Courses)" required>
@@ -521,7 +521,7 @@
         <div class="layout-split">
             <div class="card">
                 <h3 style="margin-top:0;">➕ Nouvel abonnement</h3>
-                <form id="sub-form">
+                <form id="sub-form" onsubmit="event.preventDefault();">
                     <input type="text" id="sub-name" placeholder="Nom (Ex: Netflix, Loyer)" required>
                     <input type="number" id="sub-amount" placeholder="Montant mensuel (€)" step="0.01" required>
                     <select id="sub-category" required></select>
@@ -559,7 +559,7 @@
             
             <div class="card">
                 <h3 style="margin-top:0;">➕ Nouvel Événement</h3>
-                <form id="event-form">
+                <form id="event-form" onsubmit="event.preventDefault();">
                     <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:15px; background:var(--bg); padding:15px; border-radius:16px;">
                         <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
                             <label style="font-size:0.9em; font-weight:800; color:var(--text); opacity:0.7; width:55px;">Début:</label>
@@ -621,13 +621,13 @@
 
         <div class="card" style="margin-bottom: 25px;">
              <h3 style="margin-top:0;">💡 Une idée ? Un bug ?</h3>
-             <p style="font-size:0.95em; color:var(--text); opacity:0.7; font-weight:600;">Contactez directement le développeur de Budget Duo.</p>
+             <p style="font-size:0.95em; color:var(--text); opacity:0.7; font-weight:600;">Contactez directement le développeur de LifeBudget.</p>
              <button id="btn-open-feedback-page" class="btn-small" style="width:100% !important; padding:15px !important; font-size:1.1em; font-weight:800; border:2px solid var(--primary); color:var(--primary);">Envoyer un message</button>
         </div>
 
         <div class="card" id="install-app-card" style="display:none; margin-bottom: 25px; border:2px solid var(--success); background:rgba(129, 178, 154, 0.05);">
             <h3 style="margin-top:0; color:var(--success);">📱 Installer l'application</h3>
-            <p style="font-size:1em; color:var(--text); font-weight:600;">Ajoutez Budget Duo à votre écran d'accueil pour y accéder comme une vraie application native !</p>
+            <p style="font-size:1em; color:var(--text); font-weight:600;">Ajoutez LifeBudget à votre écran d'accueil pour y accéder comme une vraie application native !</p>
             <button id="btn-install-pwa" style="background:var(--success); color:#fff; width:100%; margin-top:15px;">Installer maintenant</button>
         </div>
         

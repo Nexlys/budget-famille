@@ -54,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const todayISO = new Date().toISOString().split('T')[0];
     if(document.getElementById('expense-date')) document.getElementById('expense-date').value = todayISO;
-    if(document.getElementById('quick-date')) document.getElementById('quick-date').value = todayISO;
 
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
@@ -140,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const uData = uSnap.data();
         
-        // S'il n'a pas encore vu le wrap-up de ce mois-ci
         if (uData.lastWrapUp !== currentMonthKey) {
             let lastDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             let prevMonth = lastDate.getMonth();
@@ -155,7 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     else { tDep += e.amount; cats[e.category] = (cats[e.category] || 0) + e.amount; }
                 });
                 let topCat = Object.keys(cats).length > 0 ? Object.keys(cats).reduce((a, b) => cats[a] > cats[b] ? a : b) : "Aucune";
-                
                 const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
                 
                 document.getElementById('wrapup-text').innerHTML = `Félicitations pour le mois de <b>${monthNames[prevMonth]} ${prevYear}</b> ! 🎉<br>Voici le bilan financier de votre foyer :`;
@@ -185,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userDoc.exists() && userDoc.data().budgetId) { 
                     CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; 
                     loadBudgetData(); 
-                    
                     if(!userDoc.data().onboardingDone) {
                         document.getElementById('modal-onboarding').style.display = 'flex';
                     }
@@ -207,7 +203,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('toggle-password')?.addEventListener('click', (e) => { const pwdInput = document.getElementById('auth-password'); if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } else { pwdInput.type = 'password'; e.target.innerText = '👁️'; } });
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
-    document.getElementById('login-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; try { if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now(), onboardingDone: false }); } } catch(err) { document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; } });
+    
+    // Auth Form Submit
+    document.getElementById('login-form')?.addEventListener('submit', async (e) => { 
+        e.preventDefault(); 
+        const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; 
+        try { 
+            if(isLoginMode) { await signInWithEmailAndPassword(auth, email, pwd); } 
+            else { const cred = await createUserWithEmailAndPassword(auth, email, pwd); await setDoc(doc(db, "users", cred.user.uid), { email: email, budgetId: null, createdAt: Date.now(), onboardingDone: false }); } 
+        } catch(err) { 
+            document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-error').innerText = "Erreur: Identifiants invalides."; 
+        } 
+    });
 
     function switchView(viewElement, navId, bnavId) {
         viewDashboard.style.display = 'none'; viewBudget.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; 
@@ -245,12 +252,13 @@ document.addEventListener('DOMContentLoaded', () => {
         receiptFile = null; document.getElementById('receipt-preview').innerText = "";
         document.getElementById('modal-expense').style.display = 'flex'; 
     });
+    
     document.getElementById('btn-close-expense-modal')?.addEventListener('click', () => { 
         document.getElementById('modal-expense').style.display = 'none'; 
         editingExpenseId = null; 
         document.getElementById('expense-form').reset();
         receiptFile = null; document.getElementById('receipt-preview').innerText = "";
-        document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
+        document.getElementById('modal-expense-title').innerText = "✨ Nouvelle Opération";
         document.getElementById('btn-submit-expense').innerText = "Ajouter";
     });
 
@@ -347,13 +355,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ÉCOUTEUR MOBILE POUR LE SWIPE
     function bindSwipeEvents() {
-        if(window.innerWidth > 850) return; // Uniquement sur mobile
+        if(window.innerWidth > 850) return; 
         
         document.querySelectorAll('#expense-list tr').forEach(tr => {
-            let startX = 0;
-            let currentX = 0;
+            let startX = 0; let currentX = 0;
             
             tr.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
@@ -363,16 +369,13 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.addEventListener('touchmove', (e) => {
                 currentX = e.touches[0].clientX;
                 let diff = currentX - startX;
-                
-                if (diff > 120) diff = 120; // Max droite
-                if (diff < -120) diff = -120; // Max gauche
+                if (diff > 120) diff = 120; 
+                if (diff < -120) diff = -120; 
                 
                 tr.style.transform = `translateX(${diff}px)`;
-                
-                if(diff < -50) tr.style.backgroundColor = "rgba(224, 122, 95, 0.2)"; // Rouge (Delete)
-                else if(diff > 50) tr.style.backgroundColor = "rgba(129, 178, 154, 0.2)"; // Vert (Edit)
+                if(diff < -50) tr.style.backgroundColor = "rgba(224, 122, 95, 0.2)"; 
+                else if(diff > 50) tr.style.backgroundColor = "rgba(129, 178, 154, 0.2)"; 
                 else tr.style.backgroundColor = "var(--card-bg)";
-                
             }, {passive: true});
             
             tr.addEventListener('touchend', () => {
@@ -382,11 +385,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let diff = currentX - startX;
                 if(diff < -80) {
-                    // Supprimer
                     const deleteBtn = tr.querySelector('.delete-exp');
                     if(deleteBtn) deleteBtn.click();
                 } else if(diff > 80) {
-                    // Modifier
                     const editBtn = tr.querySelector('.edit-exp');
                     if(editBtn) editBtn.click();
                 }
@@ -433,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if(globalDep > globalRev && globalRev > 0) coachMsg = `📉 Vous avez dépensé plus que vos revenus ce mois-ci.`;
             else if(globalDep === 0) coachMsg = `✨ Nouveau mois, nouvelles économies ! C'est parti.`;
         }
-        document.getElementById('coach-msg').innerText = coachMsg;
+        if(document.getElementById('coach-msg')) document.getElementById('coach-msg').innerText = coachMsg;
 
         let filteredExpenses = monthlyExpenses;
         
@@ -492,7 +493,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Ajout des écouteurs de Swipe sur Mobile
         bindSwipeEvents();
 
         document.getElementById('total-revenus').innerText = globalRev.toFixed(2) + ' €'; 
@@ -607,7 +607,6 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), s => { 
             expenses = []; s.forEach(doc => expenses.push({ id: doc.id, ...doc.data() })); 
             updateUI(); 
-            // Appel à la fonction de vérification du Wrap-Up une fois les dépenses chargées
             checkWrapUp();
         }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), s => { customCategories = []; s.forEach(doc => customCategories.push({ id: doc.id, ...doc.data() })); renderCategories(); updateUI(); }));
@@ -636,6 +635,91 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-create-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom.", "Oups"); const code = Math.random().toString(36).substring(2, 8).toUpperCase(); const ref = await addDoc(collection(db, "budgets"), { code, owner: auth.currentUser.uid }); await setDoc(doc(db, "budgets", ref.id, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: ref.id }, { merge: true }); window.location.reload(); });
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable ! Vérifiez avec votre partenaire.", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
+
+    // SOUMISSION SÉCURISÉE DE FORMULAIRE (Empêche le rafraîchissement)
+    async function submitExpenseForm() {
+        const btnSubmit = document.getElementById('btn-submit-expense');
+        const originalText = btnSubmit.innerText;
+        btnSubmit.innerText = "Ajout...";
+        btnSubmit.disabled = true;
+
+        try {
+            const type = document.querySelector('input[name="trans-type"]:checked').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const cat = document.getElementById('category').value;
+            const desc = document.getElementById('desc').value;
+            const dateVal = document.getElementById('expense-date').value;
+
+            let savedReceiptUrl = null;
+            if(receiptFile) {
+                btnSubmit.innerText = "Upload image...";
+                const storageRef = ref(storage, `budgets/${CURRENT_BUDGET_ID}/receipts/${Date.now()}_${receiptFile.name}`);
+                await uploadBytes(storageRef, receiptFile);
+                savedReceiptUrl = await getDownloadURL(storageRef);
+            }
+
+            if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
+                const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
+                if(targetGoal) {
+                    await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
+                    if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
+                }
+            } 
+            
+            const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
+            const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
+            
+            const expenseData = { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type };
+            if(savedReceiptUrl) expenseData.receiptUrl = savedReceiptUrl;
+
+            if(editingExpenseId) {
+                await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), expenseData);
+                editingExpenseId = null; 
+            } else {
+                await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), expenseData); 
+            }
+
+            // Réinitialisation du formulaire
+            document.getElementById('expense-form').reset(); 
+            document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
+            document.getElementById('payer').value = auth.currentUser.uid; 
+            receiptFile = null; document.getElementById('receipt-preview').innerText = "";
+            document.getElementById('modal-expense').style.display = 'none'; 
+            
+            document.getElementById('modal-expense-title').innerText = "✨ Nouvelle Opération";
+
+        } catch (error) {
+            console.error(error);
+            customAlert("Une erreur est survenue lors de la sauvegarde.");
+        } finally {
+            btnSubmit.innerText = "Ajouter";
+            btnSubmit.disabled = false;
+        }
+    }
+
+    document.getElementById('expense-form')?.addEventListener('submit', async (e) => { 
+        e.preventDefault(); 
+        await submitExpenseForm();
+    });
+
+    document.getElementById('category-form')?.addEventListener('submit', async (e) => { 
+        e.preventDefault(); 
+        const em = document.getElementById('new-cat-emoji').value;
+        const nom = document.getElementById('new-cat-name').value;
+        const lim = parseFloat(document.getElementById('new-cat-limit').value) || null;
+
+        if(editingCategoryId) {
+            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, editingCategoryId), { emoji: em, name: nom, limit: lim });
+            editingCategoryId = null;
+            document.getElementById('btn-submit-category').innerText = "+ Ajouter";
+            document.getElementById('category-form-title').innerText = "Gérer les Catégories";
+        } else {
+            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: em, name: nom, limit: lim }); 
+        }
+        e.target.reset(); 
+    });
+
+    document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value), archived: false }); e.target.reset(); });
 
     document.addEventListener('click', async (e) => {
         
@@ -734,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(expenses.length === 0) return customAlert("Aucune donnée à exporter.", "Oups !");
         let csvContent = "data:text/csv;charset=utf-8,Date,Type,Description,Catégorie,Payé par,Montant\n";
         expenses.forEach(e => { const typeStr = e.type === 'income' ? 'Revenu' : 'Dépense'; const payerName = members.find(m => m.id === e.payerId)?.name || "Inconnu"; csvContent += `"${e.date}","${typeStr}","${e.desc}","${e.category}","${payerName}","${e.amount}"\n`; });
-        const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `budget_duo_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`); document.body.appendChild(link); link.click(); link.remove();
+        const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `LifeBudget_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`); document.body.appendChild(link); link.click(); link.remove();
     });
 
     const fM = document.getElementById('filter-month'), fY = document.getElementById('filter-year');
