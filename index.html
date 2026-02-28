@@ -67,7 +67,7 @@
 
         .fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; overflow-y:auto; }
         #custom-dialog-overlay, #modal-expense, #modal-onboarding, #modal-wrapup { background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); }
-        .auth-box { background: var(--card-bg); padding: 40px; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); width: 100%; max-width: 450px; text-align: center; border: 1px solid var(--border); position: relative; }
+        .auth-box { background: var(--card-bg); padding: 40px; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); width: 100%; max-width: 450px; text-align: center; border: 1px solid var(--border); position: relative; margin-bottom: 5vh; margin-top:auto;}
 
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; margin-bottom: 35px; width: 100%; align-items: start; }
         .layout-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; align-items: start; width: 100%; }
@@ -157,7 +157,7 @@
         .bottom-nav-item span { font-size: 1.6em; transition: 0.3s; }
         .bottom-nav-item.active span { transform: scale(1.15); }
 
-        /* 📱 AMÉLIORATIONS MOBILES : CARTES ET SWIPE */
+        /* 📱 CORRECTION DE L'AFFICHAGE MOBILE ET DU SWIPE */
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.1); border-right:none; border-radius: 0 30px 30px 0; }
             .sidebar.mobile-open { transform: translateX(0); }
@@ -173,18 +173,28 @@
             .balance { font-size: 1.8em; }
             h2 { font-size: 1.4em; }
 
-            .table-container { background: transparent !important; box-shadow: none !important; border: none !important; padding:0 !important; }
-            table, tbody { display: block; width: 100%; }
+            /* ⬇️ LA CORRECTION DU TABLEAU MOBILE EST ICI ⬇️ */
+            .table-container { background: transparent !important; box-shadow: none !important; border: none !important; padding:0 !important; overflow: visible !important; }
+            table, tbody { display: block; width: 100%; min-width: 0 !important; }
             thead { display: none; }
             
             tr { 
                 display: block; position: relative; background: var(--card-bg); border-radius: 16px; 
                 margin-bottom: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
                 border: 1px solid var(--border); touch-action: pan-y; z-index:2; 
+                width: 100%; box-sizing: border-box;
             }
-            td { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border: none !important; font-size: 0.95em; }
-            td::before { content: attr(data-label); font-weight: 800; opacity: 0.6; font-size: 0.85em; text-transform: uppercase; color: var(--primary); }
-            td:last-child { margin-top: 10px; border-top: 1px dashed var(--border) !important; padding-top: 12px; justify-content: space-around; } 
+            td { 
+                display: flex; justify-content: space-between; align-items: center; 
+                padding: 8px 0; border: none !important; font-size: 0.95em; 
+                text-align: right; word-break: break-word; gap: 10px;
+            }
+            td::before { 
+                content: attr(data-label); font-weight: 800; opacity: 0.6; 
+                font-size: 0.85em; text-transform: uppercase; color: var(--primary); 
+                text-align: left; flex-shrink: 0;
+            }
+            td:last-child { margin-top: 10px; border-top: 1px dashed var(--border) !important; padding-top: 12px; justify-content: flex-end; } 
         }
         
         .section-header { display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid var(--border); padding-bottom:10px; margin-bottom: 20px; }
@@ -247,7 +257,6 @@
     <div class="auth-box" style="position:relative; text-align:left;">
         <button id="btn-close-expense-modal" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6; cursor:pointer;">✕</button>
         <h2 id="modal-expense-title" style="color: var(--primary); margin-top:0; font-weight:800; text-align:center;">✨ Nouvelle Opération</h2>
-        
         <form id="expense-form" onsubmit="event.preventDefault();">
             <div class="transaction-type-toggle">
                 <label class="radio-label"><input type="radio" name="trans-type" value="expense" checked><span class="radio-btn">📉 Dépense</span></label>

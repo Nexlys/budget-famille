@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const todayISO = new Date().toISOString().split('T')[0];
     if(document.getElementById('expense-date')) document.getElementById('expense-date').value = todayISO;
+    if(document.getElementById('quick-date')) document.getElementById('quick-date').value = todayISO;
 
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userDoc.exists() && userDoc.data().budgetId) { 
                     CURRENT_BUDGET_ID = userDoc.data().budgetId; screenAuth.style.display = 'none'; screenSetup.style.display = 'none'; 
                     loadBudgetData(); 
+                    
                     if(!userDoc.data().onboardingDone) {
                         document.getElementById('modal-onboarding').style.display = 'flex';
                     }
@@ -204,7 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('toggle-password')?.addEventListener('click', (e) => { const pwdInput = document.getElementById('auth-password'); if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } else { pwdInput.type = 'password'; e.target.innerText = '👁️'; } });
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
     
-    // Auth Form Submit
     document.getElementById('login-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); 
         const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; 
@@ -355,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 👆 ÉCOUTEUR MOBILE POUR LE SWIPE 👆
     function bindSwipeEvents() {
         if(window.innerWidth > 850) return; 
         
@@ -483,11 +485,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let receiptIcon = e.receiptUrl ? `<a href="${e.receiptUrl}" target="_blank" title="Voir le justificatif" style="text-decoration:none; margin-left:5px; font-size:1.2em;">📎</a>` : '';
 
-                tr.innerHTML = `<td data-label="Date">${e.date}</td><td data-label="Description">${e.desc} ${receiptIcon}</td><td data-label="Catégorie"><small style="background:var(--bg); padding:6px 10px; border-radius:12px; font-weight:700;">${e.category}</small></td><td data-label="Par"><strong>${memberStats[currentPayerId]?.name || e.payer}</strong></td><td data-label="Montant" style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</td>
-                <td data-label="Actions" style="white-space:nowrap;">
-                    <button class="duplicate-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Dupliquer">📋</button>
-                    <button class="edit-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Modifier">✏️</button>
-                    <button class="delete-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em;" title="Supprimer">🗑️</button>
+                // NOUVEAU : STRUCTURE DE TABLEAU SOLIDE POUR EVITER LE BUG DE COUPURE
+                tr.innerHTML = `
+                <td data-label="Date"><span style="text-align:right;">${e.date}</span></td>
+                <td data-label="Description"><span style="text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:5px;">${e.desc} ${receiptIcon}</span></td>
+                <td data-label="Catégorie"><span style="background:var(--bg); padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.85em; display:inline-block;">${e.category}</span></td>
+                <td data-label="Par"><span style="text-align:right;"><strong>${memberStats[currentPayerId]?.name || e.payer}</strong></span></td>
+                <td data-label="Montant"><span style="color:${isInc?'var(--success)':'var(--danger)'}; font-weight:800; font-size:1.1em; text-align:right;">${isInc?'+':'-'}${e.amount.toFixed(2)}€</span></td>
+                <td data-label="Actions">
+                    <div style="display:flex; gap:5px; justify-content:flex-end;">
+                        <button class="duplicate-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em; margin:0;" title="Dupliquer">📋</button>
+                        <button class="edit-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em; margin:0;" title="Modifier">✏️</button>
+                        <button class="delete-exp btn-small" data-id="${e.id}" style="padding:6px; border:none; background:none; font-size:1.2em; margin:0;" title="Supprimer">🗑️</button>
+                    </div>
                 </td>`; 
                 list.appendChild(tr);
             });
@@ -636,70 +646,55 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable ! Vérifiez avec votre partenaire.", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    // SOUMISSION SÉCURISÉE DE FORMULAIRE (Empêche le rafraîchissement)
-    async function submitExpenseForm() {
-        const btnSubmit = document.getElementById('btn-submit-expense');
-        const originalText = btnSubmit.innerText;
-        btnSubmit.innerText = "Ajout...";
-        btnSubmit.disabled = true;
-
-        try {
-            const type = document.querySelector('input[name="trans-type"]:checked').value;
-            const amount = parseFloat(document.getElementById('amount').value);
-            const cat = document.getElementById('category').value;
-            const desc = document.getElementById('desc').value;
-            const dateVal = document.getElementById('expense-date').value;
-
-            let savedReceiptUrl = null;
-            if(receiptFile) {
-                btnSubmit.innerText = "Upload image...";
+    async function saveExpense(type, amount, cat, desc, dateVal) {
+        let savedReceiptUrl = null;
+        if(receiptFile) {
+            document.getElementById('btn-submit-expense').innerText = "Envoi de l'image...";
+            document.getElementById('btn-submit-expense').disabled = true;
+            try {
                 const storageRef = ref(storage, `budgets/${CURRENT_BUDGET_ID}/receipts/${Date.now()}_${receiptFile.name}`);
                 await uploadBytes(storageRef, receiptFile);
                 savedReceiptUrl = await getDownloadURL(storageRef);
+            } catch(e) {
+                console.error(e);
+                await customAlert("Erreur lors de l'envoi de la photo. Vérifiez que votre projet Firebase est bien configuré sur la facturation Blaze.");
             }
+            document.getElementById('btn-submit-expense').disabled = false;
+        }
 
-            if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
-                const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
-                if(targetGoal) {
-                    await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
-                    if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
-                }
-            } 
-            
-            const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
-            const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
-            
-            const expenseData = { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type };
-            if(savedReceiptUrl) expenseData.receiptUrl = savedReceiptUrl;
-
-            if(editingExpenseId) {
-                await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), expenseData);
-                editingExpenseId = null; 
-            } else {
-                await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), expenseData); 
+        if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
+            const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
+            if(targetGoal) {
+                await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
+                if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
             }
+        } 
+        
+        const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
+        const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
+        
+        const expenseData = { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type };
+        if(savedReceiptUrl) expenseData.receiptUrl = savedReceiptUrl;
 
-            // Réinitialisation du formulaire
-            document.getElementById('expense-form').reset(); 
-            document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
-            document.getElementById('payer').value = auth.currentUser.uid; 
-            receiptFile = null; document.getElementById('receipt-preview').innerText = "";
-            document.getElementById('modal-expense').style.display = 'none'; 
-            
-            document.getElementById('modal-expense-title').innerText = "✨ Nouvelle Opération";
-
-        } catch (error) {
-            console.error(error);
-            customAlert("Une erreur est survenue lors de la sauvegarde.");
-        } finally {
-            btnSubmit.innerText = "Ajouter";
-            btnSubmit.disabled = false;
+        if(editingExpenseId) {
+            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), expenseData);
+            editingExpenseId = null; 
+        } else {
+            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), expenseData); 
         }
     }
 
     document.getElementById('expense-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); 
-        await submitExpenseForm();
+        await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value, document.getElementById('expense-date').value); 
+        e.target.reset(); 
+        document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
+        document.getElementById('payer').value = auth.currentUser.uid; 
+        receiptFile = null; document.getElementById('receipt-preview').innerText = "";
+        document.getElementById('modal-expense').style.display = 'none'; 
+        
+        document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
+        document.getElementById('btn-submit-expense').innerText = "Ajouter";
     });
 
     document.getElementById('category-form')?.addEventListener('submit', async (e) => { 
