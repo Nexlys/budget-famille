@@ -7,7 +7,6 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -39,11 +38,8 @@
         <button id="btn-close-wrapup" style="position:absolute; top:15px; right:15px; background:var(--bg); color:var(--text); font-size:1.2em; width:36px; height:36px; border-radius:50%; border:none; margin:0; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.6; cursor:pointer;">✕</button>
         <h1 style="font-size:3.5em; margin:0 0 10px 0;">🎆</h1>
         <h2 style="color:var(--primary); font-weight:800; margin-top:0;">Bilan Mensuel !</h2>
-        <p id="wrapup-text" style="font-size:1.05em; color:var(--text); font-weight:600; line-height:1.6; margin-bottom:20px;">
-            Calcul en cours...
-        </p>
-        <div id="wrapup-stats" style="display:flex; justify-content:space-around; background:var(--bg); padding:15px; border-radius:16px; margin-bottom:25px; gap:10px;">
-        </div>
+        <p id="wrapup-text" style="font-size:1.05em; color:var(--text); font-weight:600; line-height:1.6; margin-bottom:20px;">Calcul en cours...</p>
+        <div id="wrapup-stats" style="display:flex; justify-content:space-around; background:var(--bg); padding:15px; border-radius:16px; margin-bottom:25px; gap:10px;"></div>
         <button id="btn-finish-wrapup" style="width:100%; margin-top:0;">Génial ! Continuer</button>
     </div>
 </div>
@@ -87,7 +83,6 @@
                 <label style="font-size:0.85em; font-weight:800; margin-left:5px; opacity:0.7; color:var(--success);">Lier à l'objectif :</label>
                 <select id="goal-selector" style="margin-top:2px; border-color:var(--success);"></select>
             </div>
-            
             <div style="margin-top:15px; margin-bottom:10px;">
                 <label for="receipt-upload" class="btn-small" style="display:block; text-align:center; cursor:pointer; background:var(--bg); border:1px dashed var(--primary); color:var(--primary); padding:12px !important; font-weight:800;">
                     📸 Ajouter un justificatif (Optionnel)
@@ -116,7 +111,7 @@
     <div class="auth-box" style="border: 2px dashed var(--danger);">
         <h1 style="font-size: 4em; margin: 0 0 15px 0;">🛠️</h1>
         <h2 style="color: var(--danger); margin-top:0; font-weight:800;">Maintenance en cours</h2>
-        <p style="color: var(--text); font-size: 1.05em; font-weight:600; line-height:1.6;">LifeBudget est actuellement en cours de mise à jour pour vous offrir de nouvelles fonctionnalités.<br><br>Veuillez revenir un peu plus tard !</p>
+        <p style="color: var(--text); font-size: 1.05em; font-weight:600; line-height:1.6;">LifeBudget est en cours de mise à jour.<br><br>Veuillez revenir un peu plus tard !</p>
         <span id="btn-admin-bypass" style="display:block; margin-top:35px; font-size:1.5em; opacity:0.1; cursor:pointer;" title="Accès technique">🔒</span>
     </div>
 </div>
@@ -252,7 +247,7 @@
 
             <div class="table-container">
                 <table>
-                    <thead style="background:var(--bg);">
+                    <thead style="border-bottom: 2px solid var(--border);">
                         <tr>
                             <th class="sortable" data-sort="date" title="Trier par date">Date <span id="sort-icon-date"></span></th>
                             <th class="sortable" data-sort="desc" title="Trier par description">Description <span id="sort-icon-desc"></span></th>
@@ -278,7 +273,7 @@
         </form>
 
         <div id="shopping-container" class="layout-split">
-            </div>
+        </div>
     </div>
 
     <div id="view-budget" class="view-section" style="display:none;">

@@ -14,6 +14,7 @@ const firebaseConfig = {
   measurementId: "G-DJMM6FLJZN"
 };
 
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -68,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const viewDashboard = document.getElementById('view-dashboard');
     const viewBudget = document.getElementById('view-budget');
-    const viewShopping = document.getElementById('view-shopping'); // NOUVEAU
+    const viewShopping = document.getElementById('view-shopping');
     const viewProfile = document.getElementById('view-profile');
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
@@ -79,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDataLoaded = false;
     let goals = [], expenses = [], customCategories = [], members = [], eventsData = [], subsData = [], monthlySettings = [];
     
-    // NOUVEAU: Données de courses
     let shoppingCategories = [];
     let shoppingItems = [];
 
@@ -160,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     else { tDep += e.amount; cats[e.category] = (cats[e.category] || 0) + e.amount; }
                 });
                 let topCat = Object.keys(cats).length > 0 ? Object.keys(cats).reduce((a, b) => cats[a] > cats[b] ? a : b) : "Aucune";
+                
                 const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
                 
                 document.getElementById('wrapup-text').innerHTML = `Félicitations pour le mois de <b>${monthNames[prevMonth]} ${prevYear}</b> ! 🎉<br>Voici le bilan financier de votre foyer :`;
@@ -211,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('toggle-password')?.addEventListener('click', (e) => { const pwdInput = document.getElementById('auth-password'); if (pwdInput.type === 'password') { pwdInput.type = 'text'; e.target.innerText = '🙈'; } else { pwdInput.type = 'password'; e.target.innerText = '👁️'; } });
     document.getElementById('auth-forgot-pwd')?.addEventListener('click', async () => { const email = document.getElementById('auth-email').value; if(!email) return customAlert("Veuillez saisir votre adresse email dans le champ ci-dessus puis cliquer ici.", "Oups !"); try { await sendPasswordResetEmail(auth, email); customAlert("Un email de réinitialisation vous a été envoyé !", "Email envoyé"); } catch(e) { customAlert("Erreur : Adresse email introuvable ou invalide.", "Erreur"); } });
-    
     document.getElementById('login-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); 
         const email = document.getElementById('auth-email').value; const pwd = document.getElementById('auth-password').value; const isLoginMode = document.getElementById('auth-title').innerText === "Connexion"; 
@@ -236,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleBtn?.addEventListener('click', () => { if (window.innerWidth <= 850) { sidebar.classList.toggle('mobile-open'); if (mobileOverlay) mobileOverlay.classList.toggle('active'); } else { sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded'); } });
     mobileOverlay?.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); });
 
-    // Clics Menus Sidebar
     document.getElementById('nav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-add-expense').style.display='flex'; });
     document.getElementById('nav-budget')?.addEventListener('click', () => { switchView(viewBudget, 'nav-budget', 'bnav-budget'); document.getElementById('fab-add-expense').style.display='none'; renderAnnualChart(); });
     document.getElementById('nav-shopping')?.addEventListener('click', () => { switchView(viewShopping, 'nav-shopping', 'bnav-shopping'); document.getElementById('fab-add-expense').style.display='none'; renderShoppingList(); });
@@ -245,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-add-expense').style.display='none';});
     document.getElementById('nav-admin')?.addEventListener('click', () => { switchView(viewAdmin, 'nav-admin', null); document.getElementById('fab-add-expense').style.display='none'; loadAdminData(); });
     
-    // Clics Barre du Bas (Mobile)
     document.getElementById('bnav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-add-expense').style.display='flex'; });
     document.getElementById('bnav-budget')?.addEventListener('click', () => { switchView(viewBudget, 'nav-budget', 'bnav-budget'); document.getElementById('fab-add-expense').style.display='none'; renderAnnualChart(); });
     document.getElementById('bnav-shopping')?.addEventListener('click', () => { switchView(viewShopping, 'nav-shopping', 'bnav-shopping'); document.getElementById('fab-add-expense').style.display='none'; renderShoppingList(); });
@@ -289,9 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
-    // --- 🛒 LOGIQUE DE LA LISTE DE COURSES ---
-    
+
     document.getElementById('shopping-cat-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const input = document.getElementById('new-shopping-cat');
@@ -313,7 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         shoppingCategories.sort((a,b) => a.createdAt - b.createdAt).forEach(cat => {
-            // Tri : Non cochés d'abord, puis par date de création
             const catItems = shoppingItems.filter(i => i.categoryId === cat.id).sort((a,b) => {
                 if(a.checked === b.checked) return a.createdAt - b.createdAt;
                 return a.checked ? 1 : -1;
@@ -359,14 +354,13 @@ document.addEventListener('DOMContentLoaded', () => {
             container.appendChild(card);
         });
         
-        // Listener touche "Entrée" pour ajouter ultra vite
         document.querySelectorAll('.quick-add-shopping').forEach(input => {
             input.addEventListener('keypress', async (e) => {
                 if(e.key === 'Enter' && e.target.value.trim() !== '') {
                     e.preventDefault();
                     const val = e.target.value.trim();
                     const catId = e.target.dataset.catid;
-                    e.target.value = ''; // Efface direct pour taper le suivant
+                    e.target.value = ''; 
                     await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`), {
                         name: val,
                         categoryId: catId,
@@ -377,7 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Listener pour cocher/décocher l'article en cliquant sur la ligne
         document.querySelectorAll('.shopping-item').forEach(item => {
             item.addEventListener('click', async (e) => {
                 if(e.target.classList.contains('delete-shopping-item')) return; 
@@ -705,6 +698,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const isDark = document.body.classList.contains('theme-dark'); const chartColors = isDark ? {inc: '#81B29A', exp: '#E07A5F', text: '#EAE4D9'} : {inc: '#81B29A', exp: '#E07A5F', text: '#5C5346'};
     myAnnualChart = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Revenus', data: monthlyData.map(d => d.inc), backgroundColor: chartColors.inc, borderRadius: 6 }, { label: 'Dépenses', data: monthlyData.map(d => d.exp), backgroundColor: chartColors.exp, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: chartColors.text } }, y: { ticks: { color: chartColors.text } } }, plugins: { legend: { labels: { color: chartColors.text, font: {family: 'Nunito', weight: 'bold'} } } } } }); }
 
+    // GESTION DU FORMULAIRE DES ABONNEMENTS RECURRENTS (CORRIGÉ)
+    document.getElementById('sub-form')?.addEventListener('submit', async (e) => { 
+        e.preventDefault(); 
+        
+        const name = document.getElementById('sub-name').value;
+        const amount = parseFloat(document.getElementById('sub-amount').value);
+        const cat = document.getElementById('sub-category').value;
+        const day = parseInt(document.getElementById('sub-day').value);
+
+        const btn = document.querySelector('#sub-form button[type="submit"]');
+        btn.innerText = "Enregistrement...";
+        btn.disabled = true;
+
+        try {
+            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), { 
+                name: name, amount: amount, category: cat, day: day 
+            }); 
+            document.getElementById('sub-form').reset(); 
+            customAlert("Abonnement enregistré avec succès !", "C'est noté"); 
+        } catch (err) {
+            console.error(err);
+            customAlert("Erreur lors de l'enregistrement.", "Erreur");
+        } finally {
+            btn.innerText = "Enregistrer l'abonnement";
+            btn.disabled = false;
+        }
+    });
+
     function renderSubs() { 
         const list = document.getElementById('subs-list'); const totLabel = document.getElementById('total-subs-amount'); if(!list || !totLabel) return; 
         list.innerHTML = ""; let total = 0; 
@@ -732,7 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), s => { subsData = []; s.forEach(doc => subsData.push({ id: doc.id, ...doc.data() })); renderSubs(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/monthly_settings`), s => { monthlySettings = []; s.forEach(doc => monthlySettings.push({ id: doc.id, ...doc.data() })); updateUI(); }));
         
-        // NOUVEAU : Récupération des courses
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/shopping_categories`), s => { shoppingCategories = []; s.forEach(doc => shoppingCategories.push({ id: doc.id, ...doc.data() })); renderShoppingList(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`), s => { shoppingItems = []; s.forEach(doc => shoppingItems.push({ id: doc.id, ...doc.data() })); renderShoppingList(); }));
     }
@@ -845,7 +865,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
 
-        // Suppression de Catégorie de Course
         if(e.target.closest('.delete-shopping-cat')) {
             const btn = e.target.closest('.delete-shopping-cat');
             if(await customConfirm("Supprimer cette catégorie et tous ses articles ?", "Attention")) {
@@ -857,7 +876,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Suppression d'un Article de Course
         if(e.target.classList.contains('delete-shopping-item')) {
             await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`, e.target.dataset.id));
             return;
