@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const viewDashboard = document.getElementById('view-dashboard');
     const viewBudget = document.getElementById('view-budget');
+    const viewShopping = document.getElementById('view-shopping'); // NOUVEAU
     const viewProfile = document.getElementById('view-profile');
     const viewCalendar = document.getElementById('view-calendar');
     const viewAdmin = document.getElementById('view-admin');
@@ -77,6 +78,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribers = [];
     let isDataLoaded = false;
     let goals = [], expenses = [], customCategories = [], members = [], eventsData = [], subsData = [], monthlySettings = [];
+    
+    // NOUVEAU: Données de courses
+    let shoppingCategories = [];
+    let shoppingItems = [];
+
     let myChart = null, myAnnualChart = null, currentSearch = "";
     let calMonth = new Date().getMonth(); let calYear = new Date().getFullYear();
     let reminderPopupShown = false;
@@ -218,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function switchView(viewElement, navId, bnavId) {
-        viewDashboard.style.display = 'none'; viewBudget.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; 
+        viewDashboard.style.display = 'none'; viewBudget.style.display = 'none'; viewShopping.style.display = 'none'; viewProfile.style.display = 'none'; viewCalendar.style.display = 'none'; if(viewAdmin) viewAdmin.style.display = 'none'; viewSubs.style.display = 'none'; 
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(el => el.classList.remove('active'));
         viewElement.style.display = 'block';
         if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
@@ -230,18 +236,21 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleBtn?.addEventListener('click', () => { if (window.innerWidth <= 850) { sidebar.classList.toggle('mobile-open'); if (mobileOverlay) mobileOverlay.classList.toggle('active'); } else { sidebar.classList.toggle('collapsed'); mainContent.classList.toggle('expanded'); } });
     mobileOverlay?.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); });
 
+    // Clics Menus Sidebar
     document.getElementById('nav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-add-expense').style.display='flex'; });
     document.getElementById('nav-budget')?.addEventListener('click', () => { switchView(viewBudget, 'nav-budget', 'bnav-budget'); document.getElementById('fab-add-expense').style.display='none'; renderAnnualChart(); });
-    document.getElementById('nav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-add-expense').style.display='none';});
+    document.getElementById('nav-shopping')?.addEventListener('click', () => { switchView(viewShopping, 'nav-shopping', 'bnav-shopping'); document.getElementById('fab-add-expense').style.display='none'; renderShoppingList(); });
+    document.getElementById('nav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', null); document.getElementById('fab-add-expense').style.display='none'; renderSubs(); });
     document.getElementById('nav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-add-expense').style.display='none'; renderCalendar(); });
-    document.getElementById('nav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-add-expense').style.display='none'; renderSubs(); });
+    document.getElementById('nav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-add-expense').style.display='none';});
     document.getElementById('nav-admin')?.addEventListener('click', () => { switchView(viewAdmin, 'nav-admin', null); document.getElementById('fab-add-expense').style.display='none'; loadAdminData(); });
     
+    // Clics Barre du Bas (Mobile)
     document.getElementById('bnav-dashboard')?.addEventListener('click', () => { switchView(viewDashboard, 'nav-dashboard', 'bnav-dashboard'); document.getElementById('fab-add-expense').style.display='flex'; });
     document.getElementById('bnav-budget')?.addEventListener('click', () => { switchView(viewBudget, 'nav-budget', 'bnav-budget'); document.getElementById('fab-add-expense').style.display='none'; renderAnnualChart(); });
-    document.getElementById('bnav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-add-expense').style.display='none';});
+    document.getElementById('bnav-shopping')?.addEventListener('click', () => { switchView(viewShopping, 'nav-shopping', 'bnav-shopping'); document.getElementById('fab-add-expense').style.display='none'; renderShoppingList(); });
     document.getElementById('bnav-calendar')?.addEventListener('click', () => { switchView(viewCalendar, 'nav-calendar', 'bnav-calendar'); document.getElementById('fab-add-expense').style.display='none'; renderCalendar(); });
-    document.getElementById('bnav-subs')?.addEventListener('click', () => { switchView(viewSubs, 'nav-subs', 'bnav-subs'); document.getElementById('fab-add-expense').style.display='none'; renderSubs(); });
+    document.getElementById('bnav-profile')?.addEventListener('click', () => { switchView(viewProfile, 'nav-profile', 'bnav-profile'); document.getElementById('fab-add-expense').style.display='none';});
 
     document.getElementById('btn-open-feedback')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; if (window.innerWidth <= 850) { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('active'); } });
     document.getElementById('btn-open-feedback-page')?.addEventListener('click', () => { document.getElementById('modal-feedback').style.display = 'flex'; });
@@ -281,6 +290,106 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // --- 🛒 LOGIQUE DE LA LISTE DE COURSES ---
+    
+    document.getElementById('shopping-cat-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('new-shopping-cat');
+        await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/shopping_categories`), {
+            name: input.value.trim(),
+            createdAt: Date.now()
+        });
+        input.value = '';
+    });
+
+    function renderShoppingList() {
+        const container = document.getElementById('shopping-container');
+        if(!container) return;
+        container.innerHTML = '';
+        
+        if(shoppingCategories.length === 0) {
+            container.innerHTML = '<p style="text-align:center; width:100%; color:var(--text); opacity:0.6; font-weight:700;">Aucune catégorie. Créez-en une ci-dessus (ex: Viandes, Légumes...) !</p>';
+            return;
+        }
+
+        shoppingCategories.sort((a,b) => a.createdAt - b.createdAt).forEach(cat => {
+            // Tri : Non cochés d'abord, puis par date de création
+            const catItems = shoppingItems.filter(i => i.categoryId === cat.id).sort((a,b) => {
+                if(a.checked === b.checked) return a.createdAt - b.createdAt;
+                return a.checked ? 1 : -1;
+            });
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.padding = '0'; 
+            card.style.overflow = 'hidden';
+            
+            let itemsHtml = '';
+            catItems.forEach(item => {
+                itemsHtml += `
+                    <div class="shopping-item" data-id="${item.id}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--border); cursor:pointer; background:${item.checked ? 'rgba(0,0,0,0.02)' : 'transparent'};">
+                        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                            <input type="checkbox" ${item.checked ? 'checked' : ''} style="width:20px; height:20px; margin:0; pointer-events:none; accent-color:var(--primary);">
+                            <span style="font-weight:700; font-size:1.05em; transition:0.2s; ${item.checked ? 'text-decoration:line-through; opacity:0.4;' : 'color:var(--text);'}">${item.name}</span>
+                        </div>
+                        <button class="delete-shopping-item btn-small" data-id="${item.id}" style="background:none; border:none; color:var(--danger); padding:5px; margin:0; box-shadow:none; font-size:1.2em;">✕</button>
+                    </div>
+                `;
+            });
+
+            card.innerHTML = `
+                <div class="card-header" style="padding:20px 20px 15px 20px; margin-bottom:0; background:rgba(212, 163, 115, 0.05); border-bottom:1px solid var(--border);">
+                    <h3 style="margin:0 !important; display:flex; justify-content:space-between; width:100%; align-items:center;">
+                        <span style="display:flex; align-items:center;">
+                            ${cat.name} 
+                            <button class="delete-shopping-cat btn-small" data-id="${cat.id}" style="background:none; border:none; color:var(--danger); font-size:0.9em; margin-left:5px !important; padding:5px !important; box-shadow:none;">🗑️</button>
+                        </span>
+                        <button type="button" class="toggle-card-btn" title="Réduire">➖</button>
+                    </h3>
+                </div>
+                <div class="card-content">
+                    <div id="cat-items-${cat.id}">
+                        ${itemsHtml}
+                    </div>
+                    <div style="padding:0; background:var(--bg);">
+                        <input type="text" class="quick-add-shopping quick-item-input" data-catid="${cat.id}" placeholder="Ajouter un article... (Appuyez sur Entrée)" style="width:100%; border:none; background:transparent; font-weight:700; font-size:1em; margin:0; padding:18px 20px; box-shadow:none; color:var(--primary); border-radius:0;">
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+        
+        // Listener touche "Entrée" pour ajouter ultra vite
+        document.querySelectorAll('.quick-add-shopping').forEach(input => {
+            input.addEventListener('keypress', async (e) => {
+                if(e.key === 'Enter' && e.target.value.trim() !== '') {
+                    e.preventDefault();
+                    const val = e.target.value.trim();
+                    const catId = e.target.dataset.catid;
+                    e.target.value = ''; // Efface direct pour taper le suivant
+                    await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`), {
+                        name: val,
+                        categoryId: catId,
+                        checked: false,
+                        createdAt: Date.now()
+                    });
+                }
+            });
+        });
+        
+        // Listener pour cocher/décocher l'article en cliquant sur la ligne
+        document.querySelectorAll('.shopping-item').forEach(item => {
+            item.addEventListener('click', async (e) => {
+                if(e.target.classList.contains('delete-shopping-item')) return; 
+                const itemId = item.dataset.id;
+                const targetItem = shoppingItems.find(i => i.id === itemId);
+                if(targetItem) {
+                    await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`, itemId), { checked: !targetItem.checked });
+                }
+            });
+        });
+    }
+
     function fireConfetti() {
         const colors = ['#D4A373', '#CCD5AE', '#E07A5F', '#81B29A', '#F2CC8F'];
         for(let i=0; i<60; i++) {
@@ -356,7 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 👆 ÉCOUTEUR MOBILE POUR LE SWIPE 👆
     function bindSwipeEvents() {
         if(window.innerWidth > 850) return; 
         
@@ -485,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let receiptIcon = e.receiptUrl ? `<a href="${e.receiptUrl}" target="_blank" title="Voir le justificatif" style="text-decoration:none; margin-left:5px; font-size:1.2em;">📎</a>` : '';
 
-                // NOUVEAU : STRUCTURE DE TABLEAU SOLIDE POUR EVITER LE BUG DE COUPURE
                 tr.innerHTML = `
                 <td data-label="Date"><span style="text-align:right;">${e.date}</span></td>
                 <td data-label="Description"><span style="text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:5px;">${e.desc} ${receiptIcon}</span></td>
@@ -624,6 +731,10 @@ document.addEventListener('DOMContentLoaded', () => {
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/events`), s => { eventsData = []; s.forEach(doc => eventsData.push({ id: doc.id, ...doc.data() })); renderCalendar(); checkReminders(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/subscriptions`), s => { subsData = []; s.forEach(doc => subsData.push({ id: doc.id, ...doc.data() })); renderSubs(); }));
         unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/monthly_settings`), s => { monthlySettings = []; s.forEach(doc => monthlySettings.push({ id: doc.id, ...doc.data() })); updateUI(); }));
+        
+        // NOUVEAU : Récupération des courses
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/shopping_categories`), s => { shoppingCategories = []; s.forEach(doc => shoppingCategories.push({ id: doc.id, ...doc.data() })); renderShoppingList(); }));
+        unsubscribers.push(onSnapshot(collection(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`), s => { shoppingItems = []; s.forEach(doc => shoppingItems.push({ id: doc.id, ...doc.data() })); renderShoppingList(); }));
     }
 
     async function loadAdminData() {
@@ -646,75 +757,69 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-join-budget')?.addEventListener('click', async () => { const pseudo = document.getElementById('setup-pseudo').value.trim(); if(!pseudo) return customAlert("Veuillez entrer votre prénom."); const snap = await getDocs(query(collection(db, "budgets"), where("code", "==", document.getElementById('join-code').value.trim().toUpperCase()))); if (!snap.empty) { const targetId = snap.docs[0].id; await setDoc(doc(db, "budgets", targetId, "members", auth.currentUser.uid), { name: pseudo }); await setDoc(doc(db, "users", auth.currentUser.uid), { budgetId: targetId }, { merge: true }); window.location.reload(); } else { customAlert("Code introuvable ! Vérifiez avec votre partenaire.", "Erreur"); } });
     document.getElementById('btn-update-pseudo')?.addEventListener('click', async () => { const newName = document.getElementById('admin-pseudo').value.trim(); if(newName && CURRENT_BUDGET_ID) { await setDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/members`, auth.currentUser.uid), { name: newName }, { merge: true }); document.getElementById('profile-success').style.display = 'block'; setTimeout(() => document.getElementById('profile-success').style.display = 'none', 3000); } });
 
-    async function saveExpense(type, amount, cat, desc, dateVal) {
-        let savedReceiptUrl = null;
-        if(receiptFile) {
-            document.getElementById('btn-submit-expense').innerText = "Envoi de l'image...";
-            document.getElementById('btn-submit-expense').disabled = true;
-            try {
+    async function submitExpenseForm() {
+        const btnSubmit = document.getElementById('btn-submit-expense');
+        const originalText = btnSubmit.innerText;
+        btnSubmit.innerText = "Ajout...";
+        btnSubmit.disabled = true;
+
+        try {
+            const type = document.querySelector('input[name="trans-type"]:checked').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const cat = document.getElementById('category').value;
+            const desc = document.getElementById('desc').value;
+            const dateVal = document.getElementById('expense-date').value;
+
+            let savedReceiptUrl = null;
+            if(receiptFile) {
+                btnSubmit.innerText = "Upload image...";
                 const storageRef = ref(storage, `budgets/${CURRENT_BUDGET_ID}/receipts/${Date.now()}_${receiptFile.name}`);
                 await uploadBytes(storageRef, receiptFile);
                 savedReceiptUrl = await getDownloadURL(storageRef);
-            } catch(e) {
-                console.error(e);
-                await customAlert("Erreur lors de l'envoi de la photo. Vérifiez que votre projet Firebase est bien configuré sur la facturation Blaze.");
             }
-            document.getElementById('btn-submit-expense').disabled = false;
-        }
 
-        if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
-            const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
-            if(targetGoal) {
-                await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
-                if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
+            if (type === 'expense' && (cat.toLowerCase().includes("épargne") || cat.toLowerCase().includes("objectif"))) { 
+                const gid = document.getElementById('goal-selector')?.value; const targetGoal = goals.find(g => g.id === gid); 
+                if(targetGoal) {
+                    await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/goals`, gid), { current: targetGoal.current + amount }); 
+                    if((targetGoal.current + amount) >= targetGoal.target) fireConfetti();
+                }
+            } 
+            
+            const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
+            const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
+            
+            const expenseData = { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type };
+            if(savedReceiptUrl) expenseData.receiptUrl = savedReceiptUrl;
+
+            if(editingExpenseId) {
+                await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), expenseData);
+                editingExpenseId = null; 
+            } else {
+                await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), expenseData); 
             }
-        } 
-        
-        const ts = new Date(dateVal).getTime() + (12 * 60 * 60 * 1000);
-        const frDate = new Date(dateVal).toLocaleDateString('fr-FR');
-        
-        const expenseData = { date: frDate, timestamp: ts, desc: desc, amount: amount, payerId: document.getElementById('payer').value || auth.currentUser.uid, category: cat, type: type };
-        if(savedReceiptUrl) expenseData.receiptUrl = savedReceiptUrl;
 
-        if(editingExpenseId) {
-            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/expenses`, editingExpenseId), expenseData);
-            editingExpenseId = null; 
-        } else {
-            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/expenses`), expenseData); 
+            document.getElementById('expense-form').reset(); 
+            document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
+            document.getElementById('payer').value = auth.currentUser.uid; 
+            receiptFile = null; document.getElementById('receipt-preview').innerText = "";
+            document.getElementById('modal-expense').style.display = 'none'; 
+            
+            document.getElementById('modal-expense-title').innerText = "✨ Nouvelle Opération";
+
+        } catch (error) {
+            console.error(error);
+            customAlert("Une erreur est survenue lors de la sauvegarde.");
+        } finally {
+            btnSubmit.innerText = "Ajouter";
+            btnSubmit.disabled = false;
         }
     }
 
     document.getElementById('expense-form')?.addEventListener('submit', async (e) => { 
         e.preventDefault(); 
-        await saveExpense(document.querySelector('input[name="trans-type"]:checked').value, parseFloat(document.getElementById('amount').value), document.getElementById('category').value, document.getElementById('desc').value, document.getElementById('expense-date').value); 
-        e.target.reset(); 
-        document.getElementById('expense-date').value = new Date().toISOString().split('T')[0]; 
-        document.getElementById('payer').value = auth.currentUser.uid; 
-        receiptFile = null; document.getElementById('receipt-preview').innerText = "";
-        document.getElementById('modal-expense').style.display = 'none'; 
-        
-        document.getElementById('form-expense-title').innerText = "✨ Nouvelle Opération";
-        document.getElementById('btn-submit-expense').innerText = "Ajouter";
+        await submitExpenseForm();
     });
-
-    document.getElementById('category-form')?.addEventListener('submit', async (e) => { 
-        e.preventDefault(); 
-        const em = document.getElementById('new-cat-emoji').value;
-        const nom = document.getElementById('new-cat-name').value;
-        const lim = parseFloat(document.getElementById('new-cat-limit').value) || null;
-
-        if(editingCategoryId) {
-            await updateDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/categories`, editingCategoryId), { emoji: em, name: nom, limit: lim });
-            editingCategoryId = null;
-            document.getElementById('btn-submit-category').innerText = "+ Ajouter";
-            document.getElementById('category-form-title').innerText = "Gérer les Catégories";
-        } else {
-            await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/categories`), { emoji: em, name: nom, limit: lim }); 
-        }
-        e.target.reset(); 
-    });
-
-    document.getElementById('goal-form')?.addEventListener('submit', async (e) => { e.preventDefault(); await addDoc(collection(db, `budgets/${CURRENT_BUDGET_ID}/goals`), { name: document.getElementById('goal-name').value, current: 0, target: parseFloat(document.getElementById('goal-target').value), archived: false }); e.target.reset(); });
 
     document.addEventListener('click', async (e) => {
         
@@ -738,6 +843,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.innerHTML = isHidden ? '➖' : '➕'; 
             } 
             return; 
+        }
+
+        // Suppression de Catégorie de Course
+        if(e.target.closest('.delete-shopping-cat')) {
+            const btn = e.target.closest('.delete-shopping-cat');
+            if(await customConfirm("Supprimer cette catégorie et tous ses articles ?", "Attention")) {
+                const catId = btn.dataset.id;
+                await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/shopping_categories`, catId));
+                const itemsToDelete = shoppingItems.filter(i => i.categoryId === catId);
+                itemsToDelete.forEach(i => deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`, i.id)));
+            }
+            return;
+        }
+
+        // Suppression d'un Article de Course
+        if(e.target.classList.contains('delete-shopping-item')) {
+            await deleteDoc(doc(db, `budgets/${CURRENT_BUDGET_ID}/shopping_items`, e.target.dataset.id));
+            return;
         }
         
         if(e.target.classList.contains('edit-exp')) {

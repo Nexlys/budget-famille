@@ -44,7 +44,6 @@
 
         body { font-family: 'Nunito', sans-serif; background-color: var(--bg); color: var(--text); transition: background-color 0.5s, color 0.5s; display: flex; min-height: 100vh; line-height: 1.5; }
         
-        /* --- SIDEBAR --- */
         .sidebar { width: 270px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 25px 20px; position: fixed; top: 0; bottom: 0; transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1001; overflow-y: auto; border-right: 1px solid var(--border); }
         .sidebar.collapsed { transform: translateX(-270px); }
         .main-content { flex: 1; margin-left: 270px; padding: 30px; transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); width: 100%; max-width: 100%; }
@@ -157,7 +156,6 @@
         .bottom-nav-item span { font-size: 1.6em; transition: 0.3s; }
         .bottom-nav-item.active span { transform: scale(1.15); }
 
-        /* 📱 CORRECTION DE L'AFFICHAGE MOBILE ET DU SWIPE */
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.1); border-right:none; border-radius: 0 30px 30px 0; }
             .sidebar.mobile-open { transform: translateX(0); }
@@ -173,7 +171,6 @@
             .balance { font-size: 1.8em; }
             h2 { font-size: 1.4em; }
 
-            /* ⬇️ LA CORRECTION DU TABLEAU MOBILE EST ICI ⬇️ */
             .table-container { background: transparent !important; box-shadow: none !important; border: none !important; padding:0 !important; overflow: visible !important; }
             table, tbody { display: block; width: 100%; min-width: 0 !important; }
             thead { display: none; }
@@ -203,6 +200,12 @@
         .trophy-card { background: linear-gradient(135deg, #F2CC8F, #E07A5F); color: white; padding: 20px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(224, 122, 95, 0.3); transition: 0.3s; }
         .trophy-card:hover { transform: translateY(-5px) scale(1.02); }
         .trophy-icon { font-size: 3em; margin-bottom: 10px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2)); }
+
+        /* Styles spécifiques pour la liste de courses */
+        .shopping-item { transition: 0.2s; }
+        .shopping-item:hover { background: rgba(0,0,0,0.01); }
+        .quick-item-input::placeholder { color: var(--text); opacity: 0.4; }
+        .quick-item-input:focus::placeholder { opacity: 0.2; }
     </style>
 </head>
 <body>
@@ -218,7 +221,7 @@
             Gérez vos finances à deux sereinement. <br><br>
             <b>1.</b> Utilisez le gros bouton <b>+</b> pour noter vos dépenses.<br>
             <b>2.</b> Onglet <b>Budget</b> pour créer vos enveloppes.<br>
-            <b>3.</b> Sur Mobile, glissez les dépenses à gauche ou à droite pour les modifier ou supprimer !
+            <b>3.</b> Onglet <b>Courses</b> pour votre liste partagée !
         </p>
         <div style="margin-bottom:25px; text-align:center; background:var(--bg); padding:12px; border-radius:12px;">
             <label style="display:inline-flex; align-items:center; gap:10px; font-weight:700; color:var(--text); cursor:pointer;">
@@ -238,7 +241,7 @@
             Calcul en cours...
         </p>
         <div id="wrapup-stats" style="display:flex; justify-content:space-around; background:var(--bg); padding:15px; border-radius:16px; margin-bottom:25px; gap:10px;">
-            </div>
+        </div>
         <button id="btn-finish-wrapup" style="width:100%; margin-top:0;">Génial ! Continuer</button>
     </div>
 </div>
@@ -350,6 +353,7 @@
     <ul class="nav-menu">
         <li id="nav-dashboard" class="nav-item active"><span>🏠</span> Accueil</li>
         <li id="nav-budget" class="nav-item"><span>🎯</span> Mon Budget</li>
+        <li id="nav-shopping" class="nav-item"><span>🛒</span> Liste de courses</li>
         <li id="nav-subs" class="nav-item"><span>🔁</span> Récurrents</li>
         <li id="nav-calendar" class="nav-item"><span>📅</span> Calendrier</li>
         <li id="nav-profile" class="nav-item" style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px;"><span>⚙️</span> Paramètres</li>
@@ -461,6 +465,19 @@
             </div>
         </div>
     </div> 
+
+    <div id="view-shopping" class="view-section" style="display:none;">
+        <h2 style="color:var(--primary); margin-top:0; font-weight:800; font-size:1.8em; margin-bottom:20px;">🛒 Liste de courses partagée</h2>
+        <p style="color:var(--text); opacity:0.7; font-weight:600; margin-bottom:25px;">Synchronisée en direct. Utilisable même sans réseau au fond du supermarché !</p>
+        
+        <form id="shopping-cat-form" style="display:flex; gap:10px; margin-bottom:30px;" onsubmit="event.preventDefault();">
+            <input type="text" id="new-shopping-cat" placeholder="Nouvelle catégorie (ex: Surgelés...)" required style="margin:0; flex:1;">
+            <button type="submit" class="btn-small" style="background:var(--primary); color:white; margin:0 !important; font-weight:800; border:none;">+ Créer</button>
+        </form>
+
+        <div id="shopping-container" class="layout-split">
+            </div>
+    </div>
 
     <div id="view-budget" class="view-section" style="display:none;">
         <h2 style="color:var(--primary); margin-top:0; font-weight:800; font-size:1.8em; margin-bottom:30px;">🎯 Mon Budget & Projets</h2>
@@ -688,7 +705,7 @@
 <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item active" id="bnav-dashboard"><span>🏠</span> Accueil</a>
     <a class="bottom-nav-item" id="bnav-budget"><span>🎯</span> Budget</a>
-    <a class="bottom-nav-item" id="bnav-subs"><span>🔁</span> Frais</a>
+    <a class="bottom-nav-item" id="bnav-shopping"><span>🛒</span> Courses</a>
     <a class="bottom-nav-item" id="bnav-calendar"><span>📅</span> Calendrier</a>
     <a class="bottom-nav-item" id="bnav-profile"><span>⚙️</span> Menu</a>
 </nav>
